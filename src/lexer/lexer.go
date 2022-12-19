@@ -46,7 +46,6 @@ func (lexer *Lexer) Parse() []Token {
 
 func (lexer *Lexer) scanToken() {
 	c := lexer.advance()
-	fmt.Println(c)
 
 	switch c {
 	case "(":
@@ -129,11 +128,11 @@ func (lexer *Lexer) scanToken() {
 	default:
 		if isDigit(c) {
 			lexer.number()
-		}
-		if isAlphabet(c) {
+		} else if isAlphabet(c) {
 			lexer.word()
+		} else {
+			fmt.Printf("Unexpected token at %d\n", lexer.line)
 		}
-		break
 	}
 }
 
@@ -165,6 +164,7 @@ func (lexer *Lexer) match(c string) bool {
 func (lexer *Lexer) string() {
 	start := lexer.current
 	for !lexer.match("\"") && !lexer.isAtEnd() {
+		lexer.advance()
 	}
 
 	value := lexer.source[start : lexer.current-1]
@@ -177,7 +177,7 @@ func (lexer *Lexer) number() {
 		lexer.advance()
 	}
 
-	value := lexer.source[start : lexer.current-1]
+	value := lexer.source[start:lexer.current]
 	num, _ := strconv.Atoi(value)
 	lexer.addToken(NUMBER, num)
 }
@@ -186,10 +186,11 @@ func (lexer *Lexer) word() {
 	word := string(lexer.source[lexer.current-1])
 	for isAlphabet(lexer.peek()) && !lexer.isAtEnd() {
 		word = word + lexer.advance()
-		if keywords[word] != Undefined {
-			lexer.addToken(keywords[word], nil)
-			return
-		}
+	}
+
+	if keywords[word] != Undefined {
+		lexer.addToken(keywords[word], nil)
+		return
 	}
 
 	lexer.addToken(IDENTIFIER, word)
@@ -205,17 +206,17 @@ func (lexer *Lexer) addToken(_type TokenType, value any) {
 }
 
 func isDigit(c string) bool {
-	if c > "0" && c < "9" {
+	if c >= "0" && c <= "9" {
 		return true
 	}
 	return false
 }
 
 func isAlphabet(c string) bool {
-	if c > "a" && c < "z" {
+	if c >= "a" && c <= "z" {
 		return true
 	}
-	if c > "A" && c < "Z" {
+	if c >= "A" && c <= "Z" {
 		return true
 	}
 	if c == "_" {
