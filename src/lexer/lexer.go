@@ -41,6 +41,7 @@ func (lexer *Lexer) Parse() []Token {
 	for !lexer.isAtEnd() {
 		lexer.scanToken()
 	}
+	lexer.addToken(EOF, nil)
 	return lexer.tokens
 }
 
