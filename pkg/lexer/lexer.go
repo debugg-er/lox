@@ -28,113 +28,108 @@ var keywords = map[string]TokenType{
 	"return": RETURN,
 }
 
-func NewLexer(source string) *Lexer {
+func NewLexer() *Lexer {
 	return &Lexer{
 		current: 0,
-		line:    0,
-		source:  source,
+		line:    1,
+		source:  "",
 		tokens:  make([]Token, 0),
 	}
 }
 
-func (lexer *Lexer) Parse() []Token {
+func (lexer *Lexer) Parse(source string) ([]Token, error) {
+	lexer.source = source
 	for !lexer.isAtEnd() {
-		lexer.scanToken()
+		err := lexer.scanToken()
+		if err != nil {
+			return nil, err
+		}
 	}
 	lexer.addToken(EOF, nil)
-	return lexer.tokens
+	tokens := lexer.tokens
+	// Reset Lexer, keep line number
+	lexer.tokens = make([]Token, 0)
+	lexer.current = 0
+	lexer.source = ""
+
+	return tokens, nil
 }
 
-func (lexer *Lexer) scanToken() {
+func (lexer *Lexer) scanToken() error {
 	c := lexer.advance()
 
 	switch c {
 	case "(":
 		lexer.addToken(LEFT_PAREN, nil)
-		break
 	case ")":
 		lexer.addToken(RIGHT_PAREN, nil)
-		break
 	case "{":
 		lexer.addToken(LEFT_BRACE, nil)
-		break
 	case "}":
 		lexer.addToken(RIGHT_BRACE, nil)
-		break
 	case ",":
 		lexer.addToken(COMMA, nil)
-		break
 	case ".":
 		lexer.addToken(DOT, nil)
-		break
 	case "-":
 		lexer.addToken(MINUS, nil)
-		break
 	case "+":
 		lexer.addToken(PLUS, nil)
-		break
 	case "*":
 		lexer.addToken(STAR, nil)
-		break
 	case ";":
 		lexer.addToken(SEMICOLON, nil)
-		break
 	case "\r":
 	case " ":
 		break
 	case "\n":
 		lexer.line = lexer.line + 1
-		break
 	case "/":
 		if lexer.match("/") {
-			for lexer.advance() != "\n" {
+			for lexer.peek() != "\n" {
+				lexer.advance()
 			}
-			lexer.line = lexer.line + 1
 		} else {
 			lexer.addToken(SLASH, nil)
 		}
-		break
 	case ">":
 		if lexer.match("=") {
 			lexer.addToken(GREATER_EQUAL, nil)
 		} else {
 			lexer.addToken(GREATER, nil)
 		}
-		break
 	case "<":
 		if lexer.match("=") {
 			lexer.addToken(LESS_EQUAL, nil)
 		} else {
 			lexer.addToken(LESS, nil)
 		}
-		break
 	case "=":
 		if lexer.match("=") {
 			lexer.addToken(EQUAL_EQUAL, nil)
 		} else {
 			lexer.addToken(EQUAL, nil)
 		}
-		break
 	case "!":
 		if lexer.match("=") {
 			lexer.addToken(BANG_EQUAL, nil)
 		} else {
 			lexer.addToken(BANG, nil)
 		}
-		break
 
 	case "\"":
 		lexer.string()
-		break
 	default:
 		if isDigit(c) {
 			lexer.number()
 		} else if isAlphabet(c) {
-			lexer.word()
+			lexer.identifier()
 		} else {
-			fmt.Printf("Unexpected token at %d\n", lexer.line)
+			return fmt.Errorf("unexpected token at line %d", lexer.line)
 		}
 	}
+
+	return nil
 }
 
 func (lexer *Lexer) advance() string {
@@ -183,7 +178,7 @@ func (lexer *Lexer) number() {
 	lexer.addToken(NUMBER, num)
 }
 
-func (lexer *Lexer) word() {
+func (lexer *Lexer) identifier() {
 	word := string(lexer.source[lexer.current-1])
 	for isAlphabet(lexer.peek()) && !lexer.isAtEnd() {
 		word = word + lexer.advance()
@@ -191,10 +186,9 @@ func (lexer *Lexer) word() {
 
 	if keywords[word] != Undefined {
 		lexer.addToken(keywords[word], nil)
-		return
+	} else {
+		lexer.addToken(IDENTIFIER, word)
 	}
-
-	lexer.addToken(IDENTIFIER, word)
 }
 
 func (lexer *Lexer) addToken(_type TokenType, value any) {
