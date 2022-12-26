@@ -22,7 +22,7 @@ func execFile() {
 		fmt.Fprintln(os.Stderr, "File not found")
 		os.Exit(1)
 	}
-	var scanner Test = lexer.NewLexer()
+	scanner := lexer.NewLexer()
 	execute(string(source), scanner)
 }
 
@@ -36,7 +36,7 @@ func enterPrompt() {
 	}
 }
 
-func execute(source string, scanner Test) {
+func execute(source string, scanner *lexer.Lexer) {
 	tokens, err := scanner.Parse(source)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -45,8 +45,4 @@ func execute(source string, scanner Test) {
 	for _, token := range tokens {
 		fmt.Println(token)
 	}
-}
-
-type Test interface {
-	Parse(source string) ([]lexer.Token, error)
 }

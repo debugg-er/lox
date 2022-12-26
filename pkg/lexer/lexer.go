@@ -3,6 +3,8 @@ package lexer
 import (
 	"fmt"
 	"strconv"
+
+	. "github.com/debugg-er/lox/pkg/common"
 )
 
 type Lexer struct {
