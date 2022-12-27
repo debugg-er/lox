@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	. "github.com/debugg-er/lox/pkg/common"
 )
 
@@ -62,7 +60,6 @@ func (p *Parser) precedence(childPrec func() *Expr, types ...TokenType) *Expr {
 
 func (p *Parser) unary() *Expr {
 	operator := p.matches(BANG, MINUS)
-	fmt.Println(operator)
 	if operator != Undefined {
 		return &Expr{
 			Type:     UNARY,
@@ -78,36 +75,19 @@ func (p *Parser) primary() *Expr {
 	token := p.advance()
 	switch token.Type {
 	case NUMBER:
-		return &Expr{
-			Type:    LITERAL,
-			Literal: token.Value,
-		}
+		return NewLiteralExpr(token.Value)
 	case STRING:
-		return &Expr{
-			Type:    LITERAL,
-			Literal: token.Value,
-		}
+		return NewLiteralExpr(token.Value)
 	case TRUE:
-		return &Expr{
-			Type:    LITERAL,
-			Literal: true,
-		}
+		return NewLiteralExpr(true)
 	case FALSE:
-		return &Expr{
-			Type:    LITERAL,
-			Literal: false,
-		}
+		return NewLiteralExpr(false)
 	case NIL:
-		return &Expr{
-			Type:    LITERAL,
-			Literal: nil,
-		}
+		return NewLiteralExpr(nil)
 	case LEFT_PAREN:
-		return &Expr{
-			Type: GROUPING,
-			Left: p.expression(),
-		}
-		// handle missing ')' error
+		expr := p.expression()
+		p.advance() // handle missing ')' error
+		return expr
 	}
 	// Give back the token
 	p.current--

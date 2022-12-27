@@ -22,17 +22,32 @@ type Expr struct {
 	Literal  interface{}
 }
 
-func DisplayExpr(expr *Expr, tab int) {
-	if expr == nil {
+func NewLiteralExpr(value interface{}) *Expr {
+	return &Expr{
+		Type:    LITERAL,
+		Literal: value,
+	}
+}
+
+func (e *Expr) Display(tab int) {
+	if e == nil {
 		fmt.Println("nil")
 		return
 	}
 
-	fmt.Println(strings.Repeat(" ", tab), "{")
-	fmt.Println(strings.Repeat(" ", tab), "operator: ", expr.Operator)
-	fmt.Print(strings.Repeat(" ", tab), "left: ")
-	DisplayExpr(expr.Left, tab+4)
-	fmt.Print(strings.Repeat(" ", tab), "right: ")
-	DisplayExpr(expr.Right, tab+4)
-	fmt.Println(strings.Repeat(" ", tab), "}")
+	fmt.Println("{")
+	if e.Operator != Undefined {
+		fmt.Printf("%s%s%v\n", strings.Repeat(" ", tab+4), "operator: ", e.Operator)
+	} else {
+		fmt.Printf("%s%s%v\n", strings.Repeat(" ", tab+4), "value: ", e.Literal)
+	}
+	if e.Left != nil {
+		fmt.Printf("%s%s", strings.Repeat(" ", tab+4), "left: ")
+		e.Left.Display(tab + 4)
+	}
+	if e.Right != nil {
+		fmt.Printf("%s%s", strings.Repeat(" ", tab+4), "right: ")
+		e.Right.Display(tab + 4)
+	}
+	fmt.Println(strings.Repeat(" ", tab) + "}")
 }

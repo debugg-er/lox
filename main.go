@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/debugg-er/lox/pkg/common"
 	"github.com/debugg-er/lox/pkg/lexer"
 	"github.com/debugg-er/lox/pkg/parser"
 )
@@ -42,7 +41,7 @@ func execute(source string, scanner *lexer.Lexer) {
 	tokens, err := scanner.Parse(source)
 	parser := parser.NewParser()
 	expr := parser.Parse(tokens)
-	common.DisplayExpr(expr, 0)
+	expr.Display(0)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
