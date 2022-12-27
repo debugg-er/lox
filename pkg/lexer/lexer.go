@@ -134,31 +134,6 @@ func (lexer *Lexer) scanToken() error {
 	return nil
 }
 
-func (lexer *Lexer) advance() string {
-	c := string(lexer.source[lexer.current])
-	lexer.current = lexer.current + 1
-	return c
-}
-
-func (lexer *Lexer) peek() string {
-	return string(lexer.source[lexer.current])
-}
-
-func (lexer *Lexer) isAtEnd() bool {
-	return lexer.current == len(lexer.source)
-}
-
-func (lexer *Lexer) match(c string) bool {
-	if lexer.isAtEnd() {
-		return false
-	}
-	if lexer.peek() != c {
-		return false
-	}
-	lexer.advance()
-	return true
-}
-
 func (lexer *Lexer) string() {
 	start := lexer.current
 	for !lexer.match("\"") && !lexer.isAtEnd() {
@@ -171,7 +146,7 @@ func (lexer *Lexer) string() {
 
 func (lexer *Lexer) number() {
 	start := lexer.current - 1
-	for isDigit(lexer.peek()) && !lexer.isAtEnd() {
+	for !lexer.isAtEnd() && isDigit(lexer.peek()) {
 		lexer.advance()
 	}
 
@@ -200,6 +175,31 @@ func (lexer *Lexer) addToken(_type TokenType, value any) {
 		Line:  lexer.line,
 	}
 	lexer.tokens = append(lexer.tokens, token)
+}
+
+func (lexer *Lexer) advance() string {
+	c := string(lexer.source[lexer.current])
+	lexer.current = lexer.current + 1
+	return c
+}
+
+func (lexer *Lexer) peek() string {
+	return string(lexer.source[lexer.current])
+}
+
+func (lexer *Lexer) isAtEnd() bool {
+	return lexer.current == len(lexer.source)
+}
+
+func (lexer *Lexer) match(c string) bool {
+	if lexer.isAtEnd() {
+		return false
+	}
+	if lexer.peek() != c {
+		return false
+	}
+	lexer.advance()
+	return true
 }
 
 func isDigit(c string) bool {
