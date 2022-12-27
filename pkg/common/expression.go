@@ -35,19 +35,22 @@ func (e *Expr) Display(tab int) {
 		return
 	}
 
+	spaces := strings.Repeat(" ", tab)
+	spaces4 := spaces + "    "
+
 	fmt.Println("{")
 	if e.Operator != Undefined {
-		fmt.Printf("%s%s%v\n", strings.Repeat(" ", tab+4), "operator: ", e.Operator)
+		fmt.Printf("%s%s%v\n", spaces4, "operator: ", e.Operator)
 	} else {
-		fmt.Printf("%s%s%v\n", strings.Repeat(" ", tab+4), "value: ", e.Literal)
+		fmt.Printf("%s%s%v\n", spaces4, "value: ", e.Literal)
 	}
 	if e.Left != nil {
-		fmt.Printf("%s%s", strings.Repeat(" ", tab+4), "left: ")
+		fmt.Print(spaces4 + "left: ")
 		e.Left.Display(tab + 4)
 	}
 	if e.Right != nil {
-		fmt.Printf("%s%s", strings.Repeat(" ", tab+4), "right: ")
+		fmt.Print(spaces4 + "right: ")
 		e.Right.Display(tab + 4)
 	}
-	fmt.Println(strings.Repeat(" ", tab) + "}")
+	fmt.Println(spaces + "}")
 }
