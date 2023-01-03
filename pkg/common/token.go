@@ -55,6 +55,22 @@ const (
 
 type Token struct {
 	Type  TokenType
-	Value any
+	Value interface{}
 	Line  int
+}
+
+var Keywords = map[string]TokenType{
+	"var":    VAR,
+	"and":    AND,
+	"or":     OR,
+	"if":     IF,
+	"else":   ELSE,
+	"true":   TRUE,
+	"false":  FALSE,
+	"nil":    NIL,
+	"for":    FOR,
+	"while":  WHILE,
+	"fun":    FUN,
+	"print":  PRINT,
+	"return": RETURN,
 }

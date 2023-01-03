@@ -14,22 +14,6 @@ type Lexer struct {
 	tokens  []Token
 }
 
-var keywords = map[string]TokenType{
-	"var":    VAR,
-	"and":    AND,
-	"or":     OR,
-	"if":     IF,
-	"else":   ELSE,
-	"true":   TRUE,
-	"false":  FALSE,
-	"nil":    NIL,
-	"for":    FOR,
-	"while":  WHILE,
-	"fun":    FUN,
-	"print":  PRINT,
-	"return": RETURN,
-}
-
 func NewLexer() *Lexer {
 	return &Lexer{
 		current: 0,
@@ -88,7 +72,7 @@ func (lexer *Lexer) scanToken() error {
 		lexer.line = lexer.line + 1
 	case "/":
 		if lexer.match("/") {
-			for lexer.peek() != "\n" {
+			for !lexer.isAtEnd() && lexer.peek() != "\n" {
 				lexer.advance()
 			}
 		} else {
@@ -123,7 +107,10 @@ func (lexer *Lexer) scanToken() error {
 		lexer.string()
 	default:
 		if isDigit(c) {
-			lexer.number()
+			err := lexer.number()
+			if err != nil {
+				return err
+			}
 		} else if isAlphabet(c) {
 			lexer.identifier()
 		} else {
@@ -140,35 +127,45 @@ func (lexer *Lexer) string() {
 		lexer.advance()
 	}
 
-	value := lexer.source[start : lexer.current-1]
-	lexer.addToken(STRING, value)
+	str := lexer.source[start : lexer.current-1]
+	lexer.addToken(STRING, str)
 }
 
-func (lexer *Lexer) number() {
+func (lexer *Lexer) number() error {
 	start := lexer.current - 1
-	for !lexer.isAtEnd() && isDigit(lexer.peek()) {
+	dotCount := 0
+
+	for !lexer.isAtEnd() && (isDigit(lexer.peek()) || lexer.peek() == ".") {
+		if lexer.peek() == "." {
+			dotCount++
+		}
 		lexer.advance()
 	}
 
 	value := lexer.source[start:lexer.current]
-	num, _ := strconv.Atoi(value)
+	if dotCount > 1 ||
+		string(value[len(value)-1]) == "." {
+		return fmt.Errorf("unexpected token at line %d", lexer.line)
+	}
+	num, _ := strconv.ParseFloat(value, 64)
 	lexer.addToken(NUMBER, num)
+	return nil
 }
 
 func (lexer *Lexer) identifier() {
-	word := string(lexer.source[lexer.current-1])
+	identifier := string(lexer.source[lexer.current-1])
 	for isAlphabet(lexer.peek()) && !lexer.isAtEnd() {
-		word = word + lexer.advance()
+		identifier = identifier + lexer.advance()
 	}
 
-	if keywords[word] != Undefined {
-		lexer.addToken(keywords[word], nil)
+	if Keywords[identifier] != Undefined {
+		lexer.addToken(Keywords[identifier], nil)
 	} else {
-		lexer.addToken(IDENTIFIER, word)
+		lexer.addToken(IDENTIFIER, identifier)
 	}
 }
 
-func (lexer *Lexer) addToken(_type TokenType, value any) {
+func (lexer *Lexer) addToken(_type TokenType, value interface{}) {
 	token := Token{
 		Type:  TokenType(_type),
 		Value: value,

@@ -39,13 +39,14 @@ func enterPrompt() {
 
 func execute(source string, scanner *lexer.Lexer) {
 	tokens, err := scanner.Parse(source)
-	parser := parser.NewParser()
-	expr := parser.Parse(tokens)
-	expr.Display(0)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+	parser := parser.NewParser()
+	expr := parser.Parse(tokens)
+	expr.Display(0)
+	fmt.Println(expr.Evaluate())
 	// for _, token := range tokens {
 	// fmt.Println(token)
 	// }
