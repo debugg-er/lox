@@ -24,7 +24,7 @@ type Expr struct {
 	Primary  *Token
 }
 
-func (e *Expr) Evaluate() *Value {
+func (e *Expr) Evaluate() (*Value, *Error) {
 	switch e.Type {
 	case PRIMARY:
 		return evaluatePrimary(e)
@@ -33,7 +33,7 @@ func (e *Expr) Evaluate() *Value {
 	case BINARY:
 		return evaluateBinary(e)
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
@@ -70,77 +70,82 @@ func NewLiteralExpr(value *Token) *Expr {
 	}
 }
 
-func evaluateBinary(e *Expr) *Value {
-	left := e.Left.Evaluate()
-	right := e.Right.Evaluate()
+func evaluateBinary(e *Expr) (*Value, *Error) {
+	left, err := e.Left.Evaluate()
+	if err != nil {
+		return nil, err
+	}
+	right, err := e.Right.Evaluate()
+	if err != nil {
+		return nil, err
+	}
 	isBothNum := left.DataType == NUMBER_DT && right.DataType == NUMBER_DT
+	l, _ := left.Data.(float64)
+	r, _ := right.Data.(float64)
 
 	switch e.Operator.Type {
 	case PLUS:
 		if !isBothNum {
-			return NewValue(STRING_DT, left.Stringify()+right.Stringify())
+			return NewValue(STRING_DT, left.Stringify()+right.Stringify()), nil
 		}
-		return NewValue(NUMBER_DT, left.Data.(float64)+right.Data.(float64))
+		return NewValue(NUMBER_DT, l+r), nil
 	case MINUS:
 		if !isBothNum {
-			// handle error
-			fmt.Println("Can't substract non-number expression")
+			return nil, NewError(e.Operator, "Operands must be a number")
 		}
-		return NewValue(NUMBER_DT, left.Data.(float64)-right.Data.(float64))
+		return NewValue(NUMBER_DT, l-r), nil
 	case STAR:
 		if !isBothNum {
-			// handle error
-			fmt.Println("Can't multiply non-number expression")
+			return nil, NewError(e.Operator, "Operands must be a number")
 		}
-		return NewValue(NUMBER_DT, left.Data.(float64)*right.Data.(float64))
+		return NewValue(NUMBER_DT, l*r), nil
 	case SLASH:
 		if !isBothNum {
-			// handle error
-			fmt.Println("Can't divide non-number expression")
+			return nil, NewError(e.Operator, "Operands must be a number")
 		}
-		if right.Data.(float64) == 0 {
-			// handle error
-			fmt.Println("Can't divide with 0")
+		if r == 0 {
+			return nil, NewError(e.Operator, "Division by zero")
 		}
-		return NewValue(NUMBER_DT, left.Data.(float64)/right.Data.(float64))
+		return NewValue(NUMBER_DT, l/r), nil
 	default:
 		panic("Language fatal")
 	}
 }
 
-func evaluateUnary(e *Expr) *Value {
+func evaluateUnary(e *Expr) (*Value, *Error) {
+	preValue, err := e.Left.Evaluate()
+	if err != nil {
+		return nil, err
+	}
 	switch e.Operator.Type {
 	case MINUS:
-		preValue := e.Left.Evaluate()
 		if preValue.DataType == NUMBER_DT {
-			return NewValue(NUMBER_DT, -preValue.DataType)
+			return NewValue(NUMBER_DT, -preValue.DataType), nil
 		} else {
-			// handle error
-			fmt.Println("Expected number")
-			return nil
+			return nil, NewError(e.Left.Primary, "Bad datatype for unary operator")
 		}
 	case BANG:
-		return NewValue(BOOLEAN_DT, !isTruthy(*e.Left.Evaluate()))
+		return NewValue(BOOLEAN_DT, !isTruthy(*preValue)), nil
 	default:
 		panic("Language fatal")
 	}
 }
 
-func evaluatePrimary(e *Expr) *Value {
+func evaluatePrimary(e *Expr) (*Value, *Error) {
 	if e.Primary.Type == TRUE {
-		return NewValue(NIL_DT, TRUE)
+		return NewValue(NIL_DT, TRUE), nil
 	}
 	if e.Primary.Type == FALSE {
-		return NewValue(NIL_DT, FALSE)
+		return NewValue(NIL_DT, FALSE), nil
 	}
 
 	switch value := e.Primary.Value.(type) {
 	case string:
-		return NewValue(STRING_DT, value)
+		return NewValue(STRING_DT, value), nil
 	case float64:
-		return NewValue(NUMBER_DT, value)
+		return NewValue(NUMBER_DT, value), nil
 	case nil:
-		return NewValue(NIL_DT, value)
+		return NewValue(NIL_DT, value), nil
 	default:
 		panic("Language fatal: Undefined datatype")
 	}

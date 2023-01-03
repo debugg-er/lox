@@ -5,22 +5,25 @@ import (
 )
 
 type Parser struct {
-	current  int
-	hadError bool
-	tokens   []Token
+	Errors  []Error
+	current int
+	tokens  []Token
 }
 
 func NewParser() *Parser {
 	return &Parser{
-		current:  0,
-		hadError: false,
-		tokens:   make([]Token, 0),
+		current: 0,
+		Errors:  make([]Error, 0),
+		tokens:  make([]Token, 0),
 	}
 }
 
 func (p *Parser) Parse(tokens []Token) *Expr {
 	p.tokens = tokens
 	expr := p.expression()
+	if _, err := expr.Evaluate(); err != nil {
+		p.Errors = append(p.Errors, *err)
+	}
 	return expr
 }
 
@@ -28,8 +31,8 @@ func (p *Parser) expression() *Expr {
 	return p.binaryPrec(binRules, 0)
 }
 
-// `rules` parameter is an array of BinaryRUle that were defined
-// with the priority go from highest to lowest accoding to its index
+// `rules` parameter is an array of BinaryRule that were defined
+// with the priority go from highest to lowest accoding to its index.
 // `binaryPrec` should be passed zero value for `ruleIndex` parameter
 func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) *Expr {
 	if ruleIndex == len(rules) {
@@ -54,15 +57,14 @@ func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) *Expr {
 
 func (p *Parser) unary() *Expr {
 	operator := p.match(BANG, MINUS)
-	if operator != nil {
-		unaryExpr := p.unary()
-		return &Expr{
-			Type:     UNARY,
-			Operator: operator,
-			Left:     unaryExpr,
-		}
-	} else {
+	if operator == nil {
 		return p.primary()
+	}
+	unaryExpr := p.unary()
+	return &Expr{
+		Type:     UNARY,
+		Operator: operator,
+		Left:     unaryExpr,
 	}
 }
 
@@ -86,12 +88,18 @@ func (p *Parser) isAtEnd() bool {
 }
 
 func (p *Parser) advance() *Token {
+	if p.isAtEnd() {
+		return nil
+	}
 	token := p.tokens[p.current]
 	p.current++
 	return &token
 }
 
 func (p *Parser) peek() *Token {
+	if p.isAtEnd() {
+		return nil
+	}
 	return &p.tokens[p.current]
 }
 
@@ -107,10 +115,34 @@ func (p *Parser) match(types ...TokenType) *Token {
 	return nil
 }
 
+func (p *Parser) Synchronize() {
+	current := p.advance()
+
+	for !p.isAtEnd() {
+		if current.Type == SEMICOLON {
+			return
+		}
+
+		switch p.peek().Type {
+		case CLASS:
+		case FUN:
+		case VAR:
+		case FOR:
+		case IF:
+		case WHILE:
+		case PRINT:
+		case RETURN:
+			return
+		}
+
+		current = p.advance()
+	}
+}
+
 func (p *Parser) consume(tokenType TokenType, message string) {
 	if p.peek().Type != tokenType {
-		p.hadError = true
-		Syncronize(p)
+		p.Errors = append(p.Errors, *NewError(p.peek(), message))
+		p.Synchronize()
 		return
 	}
 	p.advance()

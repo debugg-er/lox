@@ -23,22 +23,20 @@ func execFile() {
 		fmt.Fprintln(os.Stderr, "File not found")
 		os.Exit(1)
 	}
-	scanner := lexer.NewLexer()
-	execute(string(source), scanner)
+	execute(string(source))
 }
 
 func enterPrompt() {
 	reader := bufio.NewReader(os.Stdin)
-	scanner := lexer.NewLexer()
 	for {
 		fmt.Print("> ")
 		code, _ := reader.ReadString('\n')
-		execute(code, scanner)
+		execute(code)
 	}
 }
 
-func execute(source string, scanner *lexer.Lexer) {
-	tokens, err := scanner.Parse(source)
+func execute(source string) {
+	tokens, err := lexer.NewLexer().Parse(source)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
@@ -46,8 +44,11 @@ func execute(source string, scanner *lexer.Lexer) {
 	parser := parser.NewParser()
 	expr := parser.Parse(tokens)
 	expr.Display(0)
-	fmt.Println(expr.Evaluate())
-	// for _, token := range tokens {
-	// fmt.Println(token)
-	// }
+	if len(parser.Errors) != 0 {
+		for _, err := range parser.Errors {
+			err.Blame()
+		}
+	} else {
+		fmt.Println(expr.Evaluate())
+	}
 }

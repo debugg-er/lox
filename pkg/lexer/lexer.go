@@ -32,13 +32,7 @@ func (lexer *Lexer) Parse(source string) ([]Token, error) {
 		}
 	}
 	lexer.addToken(EOF, nil)
-	tokens := lexer.tokens
-	// Reset Lexer, keep line number
-	lexer.tokens = make([]Token, 0)
-	lexer.current = 0
-	lexer.source = ""
-
-	return tokens, nil
+	return lexer.tokens, nil
 }
 
 func (lexer *Lexer) scanToken() error {
