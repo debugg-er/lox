@@ -42,13 +42,14 @@ func execute(source string) {
 		os.Exit(1)
 	}
 	parser := parser.NewParser()
-	expr := parser.Parse(tokens)
-	expr.Display(0)
+	statements := parser.Parse(tokens)
 	if len(parser.Errors) != 0 {
 		for _, err := range parser.Errors {
 			err.Blame()
 		}
 	} else {
-		fmt.Println(expr.Evaluate())
+		for _, stmt := range statements {
+			stmt.Execute()
+		}
 	}
 }

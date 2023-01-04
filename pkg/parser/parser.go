@@ -18,33 +18,74 @@ func NewParser() *Parser {
 	}
 }
 
-func (p *Parser) Parse(tokens []Token) *Expr {
+func (p *Parser) Parse(tokens []Token) []Stmt {
 	p.tokens = tokens
-	expr := p.expression()
-	if _, err := expr.Evaluate(); err != nil {
-		p.Errors = append(p.Errors, *err)
+	statements := make([]Stmt, 0)
+	for !p.isAtEnd() {
+		stmt, err := p.statement()
+		if err != nil {
+			p.Errors = append(p.Errors, *err)
+			p.Synchronize()
+		} else {
+			statements = append(statements, *stmt)
+		}
 	}
-	return expr
+	return statements
 }
 
-func (p *Parser) expression() *Expr {
-	return p.binaryPrec(binRules, 0)
+func (p *Parser) statement() (*Stmt, *Error) {
+	var stmtType StmtType
+	if p.peek().Type == PRINT {
+		stmtType = PRINT_STMM
+		p.advance()
+	} else {
+		stmtType = EXPR_STMT
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = p.consume(SEMICOLON, "Expected ;"); err != nil {
+		return nil, err
+	}
+	return &Stmt{
+		Type: stmtType,
+		Expr: expr,
+	}, nil
+}
+
+func (p *Parser) expression() (*Expr, *Error) {
+	expr, err := p.binaryPrec(binRules, 0)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := expr.Evaluate(); err != nil {
+		return nil, err
+	}
+	return expr, nil
 }
 
 // `rules` parameter is an array of BinaryRule that were defined
 // with the priority go from highest to lowest accoding to its index.
 // `binaryPrec` should be passed zero value for `ruleIndex` parameter
-func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) *Expr {
+func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) (*Expr, *Error) {
 	if ruleIndex == len(rules) {
 		return p.unary()
 	}
-	expr := p.binaryPrec(rules, ruleIndex+1)
+	expr, err := p.binaryPrec(rules, ruleIndex+1)
+	if err != nil {
+		return nil, err
+	}
 	for {
 		operator := p.match(rules[ruleIndex]...)
 		if operator == nil {
-			return expr
+			return expr, nil
 		}
-		childPrec := p.binaryPrec(rules, ruleIndex+1)
+		childPrec, err := p.binaryPrec(rules, ruleIndex+1)
+		if err != nil {
+			return nil, err
+		}
 
 		expr = &Expr{
 			Type:     BINARY,
@@ -55,32 +96,40 @@ func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) *Expr {
 	}
 }
 
-func (p *Parser) unary() *Expr {
+func (p *Parser) unary() (*Expr, *Error) {
 	operator := p.match(BANG, MINUS)
 	if operator == nil {
 		return p.primary()
 	}
-	unaryExpr := p.unary()
+	unaryExpr, err := p.unary()
+	if err != nil {
+		return nil, err
+	}
 	return &Expr{
 		Type:     UNARY,
 		Operator: operator,
 		Left:     unaryExpr,
-	}
+	}, nil
 }
 
-func (p *Parser) primary() *Expr {
+func (p *Parser) primary() (*Expr, *Error) {
 	token := p.advance()
 	switch token.Type {
 	case NUMBER, STRING, TRUE, FALSE, NIL:
-		return NewLiteralExpr(token)
+		return NewLiteralExpr(token), nil
 	case LEFT_PAREN:
-		expr := p.expression()
-		p.consume(RIGHT_PAREN, "Expected ')' after expression")
-		return expr
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		if err = p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
+			return nil, err
+		}
+		return expr, nil
 	}
 	// Give back the token
 	p.current--
-	return nil
+	return nil, nil
 }
 
 func (p *Parser) isAtEnd() bool {
@@ -116,34 +165,29 @@ func (p *Parser) match(types ...TokenType) *Token {
 }
 
 func (p *Parser) Synchronize() {
-	current := p.advance()
+	previous := p.peek()
 
 	for !p.isAtEnd() {
-		if current.Type == SEMICOLON {
+		if previous.Type == SEMICOLON {
 			return
 		}
 
 		switch p.peek().Type {
-		case CLASS:
-		case FUN:
-		case VAR:
-		case FOR:
-		case IF:
-		case WHILE:
-		case PRINT:
-		case RETURN:
+		case CLASS, FUN, VAR, FOR, IF, WHILE, PRINT, RETURN:
 			return
 		}
 
-		current = p.advance()
+		previous = p.advance()
 	}
 }
 
-func (p *Parser) consume(tokenType TokenType, message string) {
+func (p *Parser) consume(tokenType TokenType, message string) *Error {
+	if p.isAtEnd() {
+		return nil
+	}
 	if p.peek().Type != tokenType {
-		p.Errors = append(p.Errors, *NewError(p.peek(), message))
-		p.Synchronize()
-		return
+		return NewError(p.peek(), message)
 	}
 	p.advance()
+	return nil
 }
