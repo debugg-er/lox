@@ -98,7 +98,10 @@ func (lexer *Lexer) scanToken() error {
 		}
 
 	case "\"":
-		lexer.string()
+		err := lexer.string()
+		if err != nil {
+			return err
+		}
 	default:
 		if isDigit(c) {
 			err := lexer.number()
@@ -115,14 +118,18 @@ func (lexer *Lexer) scanToken() error {
 	return nil
 }
 
-func (lexer *Lexer) string() {
+func (lexer *Lexer) string() error {
 	start := lexer.current
 	for !lexer.match("\"") && !lexer.isAtEnd() {
 		lexer.advance()
 	}
+	if lexer.isAtEnd() && lexer.previous() != "\"" {
+		return fmt.Errorf("expected '\"' at line %d", lexer.line)
+	}
 
 	str := lexer.source[start : lexer.current-1]
 	lexer.addToken(STRING, str)
+	return nil
 }
 
 func (lexer *Lexer) number() error {
@@ -137,8 +144,7 @@ func (lexer *Lexer) number() error {
 	}
 
 	value := lexer.source[start:lexer.current]
-	if dotCount > 1 ||
-		string(value[len(value)-1]) == "." {
+	if dotCount > 1 || lexer.previous() == "." {
 		return fmt.Errorf("unexpected token at line %d", lexer.line)
 	}
 	num, _ := strconv.ParseFloat(value, 64)
@@ -176,6 +182,10 @@ func (lexer *Lexer) advance() string {
 
 func (lexer *Lexer) peek() string {
 	return string(lexer.source[lexer.current])
+}
+
+func (lexer *Lexer) previous() string {
+	return string(lexer.source[lexer.current-1])
 }
 
 func (lexer *Lexer) isAtEnd() bool {

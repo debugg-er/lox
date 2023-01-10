@@ -1,4 +1,3 @@
 - Handle parser error + syncronize
 - Convert bool to bit when evaluate binary expr
-- Handle unclosed string
 - Expected ; at EOF

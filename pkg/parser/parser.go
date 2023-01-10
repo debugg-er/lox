@@ -35,9 +35,8 @@ func (p *Parser) Parse(tokens []Token) []Stmt {
 
 func (p *Parser) statement() (*Stmt, *Error) {
 	var stmtType StmtType
-	if p.peek().Type == PRINT {
+	if p.match(PRINT) != nil {
 		stmtType = PRINT_STMM
-		p.advance()
 	} else {
 		stmtType = EXPR_STMT
 	}
@@ -46,7 +45,7 @@ func (p *Parser) statement() (*Stmt, *Error) {
 		return nil, err
 	}
 
-	if err = p.consume(SEMICOLON, "Expected ;"); err != nil {
+	if err = p.consume(SEMICOLON, "Expected ';' after expression"); err != nil {
 		return nil, err
 	}
 	return &Stmt{
