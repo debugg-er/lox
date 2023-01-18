@@ -22,36 +22,67 @@ func (p *Parser) Parse(tokens []Token) []Stmt {
 	p.tokens = tokens
 	statements := make([]Stmt, 0)
 	for !p.isAtEnd() {
-		stmt, err := p.statement()
+		stmt, err := p.declaration()
 		if err != nil {
 			p.Errors = append(p.Errors, *err)
 			p.Synchronize()
 		} else {
-			statements = append(statements, *stmt)
+			statements = append(statements, stmt)
 		}
 	}
 	return statements
 }
 
-func (p *Parser) statement() (*Stmt, *Error) {
-	var stmtType StmtType
-	if p.match(PRINT) != nil {
-		stmtType = PRINT_STMM
-	} else {
-		stmtType = EXPR_STMT
+func (p *Parser) declaration() (Stmt, *Error) {
+	if p.match(VAR) != nil {
+		return p.varDecl()
 	}
+	return p.statement()
+}
+
+func (p *Parser) varDecl() (Stmt, *Error) {
+	// token := p.advance()
+	// if token.Type != IDENTIFIER {
+	// 	return nil, NewError(token, "Expected variable name.")
+	// }
+	// var initilizer *Expr = nil
+	// if p.match(EQUAL) != nil {
+	// 	expr, err := p.expression()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	initilizer = expr
+	// }
+	return &VarStmt{}, nil
+}
+
+func (p *Parser) statement() (Stmt, *Error) {
+	if p.match(PRINT) != nil {
+		return p.printStmt()
+	}
+	return p.exprStmt()
+}
+
+func (p *Parser) printStmt() (Stmt, *Error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
+	if err = p.consume(SEMICOLON, "Expected ';' after value"); err != nil {
+		return nil, err
+	}
+	return &PrintStmt{expr}, nil
+}
 
+func (p *Parser) exprStmt() (Stmt, *Error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
 	if err = p.consume(SEMICOLON, "Expected ';' after expression"); err != nil {
 		return nil, err
 	}
-	return &Stmt{
-		Type: stmtType,
-		Expr: expr,
-	}, nil
+	return &ExprStmt{expr}, nil
 }
 
 func (p *Parser) expression() (*Expr, *Error) {
@@ -125,6 +156,11 @@ func (p *Parser) primary() (*Expr, *Error) {
 			return nil, err
 		}
 		return expr, nil
+	case IDENTIFIER:
+		return &Expr{
+			Type: VARIABLE,
+			Var:  token,
+		}, nil
 	}
 	// Give back the token
 	p.current--

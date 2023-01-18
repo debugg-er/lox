@@ -2,6 +2,8 @@ package parser
 
 import (
 	"fmt"
+
+	. "github.com/debugg-er/lox/pkg/common"
 )
 
 type StmtType int
@@ -13,19 +15,35 @@ const (
 	FOR_STMT
 	WHILE_STMT
 	RETURN_STMT
+	VAR_STMT
 )
 
-type Stmt struct {
-	Type StmtType
+type Stmt interface {
+	Execute()
+}
+
+type PrintStmt struct {
 	Expr *Expr
 }
 
-func (t *Stmt) Execute() {
-	switch t.Type {
-	case EXPR_STMT:
-		t.Expr.Display(0)
-	case PRINT_STMM:
-		value, _ := t.Expr.Evaluate()
-		fmt.Print(value.Data)
-	}
+type ExprStmt struct {
+	Expr *Expr
+}
+
+type VarStmt struct {
+	name       *Token
+	initilizer *Expr
+}
+
+func (t *PrintStmt) Execute() {
+	value, _ := t.Expr.Evaluate()
+	fmt.Print(value.Data)
+}
+
+func (t *ExprStmt) Execute() {
+	t.Expr.Display(0)
+}
+
+func (t *VarStmt) Execute() {
+
 }

@@ -14,6 +14,7 @@ const (
 	// GROUPING
 	UNARY
 	BINARY
+	VARIABLE
 )
 
 type Expr struct {
@@ -22,6 +23,7 @@ type Expr struct {
 	Left     *Expr
 	Right    *Expr
 	Primary  *Token
+	Var      *Token
 }
 
 func (e *Expr) Evaluate() (*Value, *Error) {
