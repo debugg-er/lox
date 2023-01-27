@@ -11,7 +11,7 @@ type Error struct {
 }
 
 func (e *Error) Blame() {
-	fmt.Fprintf(os.Stderr, "Line %d: %s\n", e.token.Line, e.message)
+	fmt.Fprintf(os.Stderr, "Line %d at '%s': %s\n", e.token.Line, e.token.Type, e.message)
 }
 
 func NewError(token *Token, message string) *Error {

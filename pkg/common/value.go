@@ -35,9 +35,17 @@ func (v Value) Stringify() string {
 	}
 }
 
-func NewValue(dataType DataType, data interface{}) *Value {
-	return &Value{
-		DataType: dataType,
-		Data:     data,
+func NewValue(data interface{}) *Value {
+	switch value := data.(type) {
+	case string:
+		return &Value{STRING_DT, value}
+	case float64:
+		return &Value{NUMBER_DT, value}
+	case bool:
+		return &Value{BOOLEAN_DT, value}
+	case nil:
+		return &Value{NIL_DT, value}
+	default:
+		panic("Language fatal: Undefined datatype")
 	}
 }

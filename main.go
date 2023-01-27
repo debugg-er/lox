@@ -41,15 +41,21 @@ func execute(source string) {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	parser := parser.NewParser()
-	statements := parser.Parse(tokens)
-	if len(parser.Errors) != 0 {
-		for _, err := range parser.Errors {
+	p := parser.NewParser()
+	statements, errs := p.Parse(tokens)
+	if len(errs) != 0 {
+		for _, err := range errs {
 			err.Blame()
 		}
-	} else {
-		for _, stmt := range statements {
-			stmt.Execute()
+		return
+	}
+
+	environment := parser.NewEnvironment(nil)
+	for _, stmt := range statements {
+		err := stmt.Execute(environment)
+		if err != nil {
+			err.Blame()
+			return
 		}
 	}
 }

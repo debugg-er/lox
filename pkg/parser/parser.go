@@ -5,7 +5,6 @@ import (
 )
 
 type Parser struct {
-	Errors  []Error
 	current int
 	tokens  []Token
 }
@@ -13,24 +12,24 @@ type Parser struct {
 func NewParser() *Parser {
 	return &Parser{
 		current: 0,
-		Errors:  make([]Error, 0),
 		tokens:  make([]Token, 0),
 	}
 }
 
-func (p *Parser) Parse(tokens []Token) []Stmt {
+func (p *Parser) Parse(tokens []Token) ([]Stmt, []*Error) {
 	p.tokens = tokens
 	statements := make([]Stmt, 0)
+	errors := make([]*Error, 0)
 	for !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
-			p.Errors = append(p.Errors, *err)
-			p.Synchronize()
+			errors = append(errors, err)
+			p.synchronize()
 		} else {
 			statements = append(statements, stmt)
 		}
 	}
-	return statements
+	return statements, errors
 }
 
 func (p *Parser) declaration() (Stmt, *Error) {
@@ -41,26 +40,81 @@ func (p *Parser) declaration() (Stmt, *Error) {
 }
 
 func (p *Parser) varDecl() (Stmt, *Error) {
-	// token := p.advance()
-	// if token.Type != IDENTIFIER {
-	// 	return nil, NewError(token, "Expected variable name.")
-	// }
-	// var initilizer *Expr = nil
-	// if p.match(EQUAL) != nil {
-	// 	expr, err := p.expression()
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	initilizer = expr
-	// }
-	return &VarStmt{}, nil
+	token := p.advance()
+	if token.Type != IDENTIFIER {
+		return nil, NewError(token, "Expected variable name.")
+	}
+	var initilizer *Expr = nil
+	if p.match(EQUAL) != nil {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		initilizer = expr
+	}
+	if err := p.consume(SEMICOLON, "Expected ';' after expression"); err != nil {
+		return nil, err
+	}
+	return &VarStmt{token, initilizer}, nil
 }
 
 func (p *Parser) statement() (Stmt, *Error) {
 	if p.match(PRINT) != nil {
 		return p.printStmt()
 	}
+	if p.match(LEFT_BRACE) != nil {
+		return p.blockStmt()
+	}
+	if p.match(IF) != nil {
+		return p.ifStmt()
+	}
 	return p.exprStmt()
+}
+
+func (p *Parser) ifStmt() (Stmt, *Error) {
+	if err := p.consume(LEFT_PAREN, "Expected '(' after if"); err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
+		return nil, err
+	}
+	trueStmt, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	var falseStmt Stmt = nil
+	if p.match(ELSE) != nil {
+		falseStmt, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &IfStmt{
+		condition: expr,
+		trueStmt:  trueStmt,
+		falseStmt: falseStmt,
+	}, nil
+}
+
+func (p *Parser) blockStmt() (Stmt, *Error) {
+	declarations := make([]Stmt, 0)
+	for !p.isAtEnd() && p.peek().Type != RIGHT_BRACE {
+		declaration, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		declarations = append(declarations, declaration)
+	}
+	if err := p.consume(RIGHT_BRACE, "Expected '}' after block"); err != nil {
+		return nil, err
+	}
+	return &BlockStmt{
+		declarations: declarations,
+	}, nil
 }
 
 func (p *Parser) printStmt() (Stmt, *Error) {
@@ -86,13 +140,30 @@ func (p *Parser) exprStmt() (Stmt, *Error) {
 }
 
 func (p *Parser) expression() (*Expr, *Error) {
-	expr, err := p.binaryPrec(binRules, 0)
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (*Expr, *Error) {
+	expr, err := p.binaryPrec(binRules, LOGICAL_OR)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := expr.Evaluate(); err != nil {
-		return nil, err
+
+	if equal := p.match(EQUAL); equal != nil {
+		if expr.Type != VARIABLE {
+			return nil, NewError(equal, "Invalid assignment target.")
+		}
+		assignment, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+		return &Expr{
+			Type:        ASSIGN,
+			Var:         expr.Var,
+			AssignValue: assignment,
+		}, nil
 	}
+
 	return expr, nil
 }
 
@@ -146,7 +217,7 @@ func (p *Parser) primary() (*Expr, *Error) {
 	token := p.advance()
 	switch token.Type {
 	case NUMBER, STRING, TRUE, FALSE, NIL:
-		return NewLiteralExpr(token), nil
+		return NewPrimaryExpr(token), nil
 	case LEFT_PAREN:
 		expr, err := p.expression()
 		if err != nil {
@@ -161,10 +232,9 @@ func (p *Parser) primary() (*Expr, *Error) {
 			Type: VARIABLE,
 			Var:  token,
 		}, nil
+	default:
+		return nil, nil
 	}
-	// Give back the token
-	p.current--
-	return nil, nil
 }
 
 func (p *Parser) isAtEnd() bool {
@@ -187,6 +257,10 @@ func (p *Parser) peek() *Token {
 	return &p.tokens[p.current]
 }
 
+func (p *Parser) previous() *Token {
+	return &p.tokens[p.current-1]
+}
+
 func (p *Parser) match(types ...TokenType) *Token {
 	if p.isAtEnd() {
 		return nil
@@ -199,7 +273,7 @@ func (p *Parser) match(types ...TokenType) *Token {
 	return nil
 }
 
-func (p *Parser) Synchronize() {
+func (p *Parser) synchronize() {
 	previous := p.peek()
 
 	for !p.isAtEnd() {

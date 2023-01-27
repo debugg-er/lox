@@ -159,7 +159,13 @@ func (lexer *Lexer) identifier() {
 	}
 
 	if Keywords[identifier] != Undefined {
-		lexer.addToken(Keywords[identifier], nil)
+		var value any = nil
+		if identifier == TRUE {
+			value = true
+		} else if identifier == FALSE {
+			value = false
+		}
+		lexer.addToken(Keywords[identifier], value)
 	} else {
 		lexer.addToken(IDENTIFIER, identifier)
 	}
