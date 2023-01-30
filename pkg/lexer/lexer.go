@@ -1,9 +1,11 @@
 package lexer
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 
+	//lint:ignore ST1001 that's what we want
 	. "github.com/debugg-er/lox/pkg/common"
 )
 
@@ -39,65 +41,65 @@ func (lexer *Lexer) scanToken() error {
 	c := lexer.advance()
 
 	switch c {
-	case "(":
+	case '(':
 		lexer.addToken(LEFT_PAREN, nil)
-	case ")":
+	case ')':
 		lexer.addToken(RIGHT_PAREN, nil)
-	case "{":
+	case '{':
 		lexer.addToken(LEFT_BRACE, nil)
-	case "}":
+	case '}':
 		lexer.addToken(RIGHT_BRACE, nil)
-	case ",":
+	case ',':
 		lexer.addToken(COMMA, nil)
-	case ".":
+	case '.':
 		lexer.addToken(DOT, nil)
-	case "-":
+	case '-':
 		lexer.addToken(MINUS, nil)
-	case "+":
+	case '+':
 		lexer.addToken(PLUS, nil)
-	case "*":
+	case '*':
 		lexer.addToken(STAR, nil)
-	case ";":
+	case ';':
 		lexer.addToken(SEMICOLON, nil)
-	case "\r":
-	case " ":
+	case '\r':
+	case ' ':
 		break
-	case "\n":
+	case '\n':
 		lexer.line = lexer.line + 1
-	case "/":
-		if lexer.match("/") {
-			for !lexer.isAtEnd() && lexer.peek() != "\n" {
+	case '/':
+		if lexer.match('/') {
+			for !lexer.isAtEnd() && lexer.peek() != '\n' {
 				lexer.advance()
 			}
 		} else {
 			lexer.addToken(SLASH, nil)
 		}
-	case ">":
-		if lexer.match("=") {
+	case '>':
+		if lexer.match('=') {
 			lexer.addToken(GREATER_EQUAL, nil)
 		} else {
 			lexer.addToken(GREATER, nil)
 		}
-	case "<":
-		if lexer.match("=") {
+	case '<':
+		if lexer.match('=') {
 			lexer.addToken(LESS_EQUAL, nil)
 		} else {
 			lexer.addToken(LESS, nil)
 		}
-	case "=":
-		if lexer.match("=") {
+	case '=':
+		if lexer.match('=') {
 			lexer.addToken(EQUAL_EQUAL, nil)
 		} else {
 			lexer.addToken(EQUAL, nil)
 		}
-	case "!":
-		if lexer.match("=") {
+	case '!':
+		if lexer.match('=') {
 			lexer.addToken(BANG_EQUAL, nil)
 		} else {
 			lexer.addToken(BANG, nil)
 		}
 
-	case "\"":
+	case '"':
 		err := lexer.string()
 		if err != nil {
 			return err
@@ -111,7 +113,7 @@ func (lexer *Lexer) scanToken() error {
 		} else if isAlphabet(c) {
 			lexer.identifier()
 		} else {
-			return fmt.Errorf("unexpected token at line %d", lexer.line)
+			return fmt.Errorf("SyntaxError: Unexpected token at line %d", lexer.line)
 		}
 	}
 
@@ -119,45 +121,45 @@ func (lexer *Lexer) scanToken() error {
 }
 
 func (lexer *Lexer) string() error {
-	start := lexer.current
-	for !lexer.match("\"") && !lexer.isAtEnd() {
-		lexer.advance()
+	var str bytes.Buffer
+	for !lexer.isAtEnd() && !lexer.match('"') {
+		c := lexer.advance()
+		if c == '\\' {
+			str.WriteByte(escapeSequence(lexer.advance()))
+		} else {
+			str.WriteByte(c)
+		}
 	}
-	if lexer.isAtEnd() && lexer.previous() != "\"" {
-		return fmt.Errorf("expected '\"' at line %d", lexer.line)
+	if lexer.isAtEnd() && lexer.previous() != '"' {
+		return fmt.Errorf("SyntaxError: Expected '\"' at line %d", lexer.line)
 	}
 
-	str := lexer.source[start : lexer.current-1]
-	lexer.addToken(STRING, str)
+	lexer.addToken(STRING, str.String())
 	return nil
 }
 
 func (lexer *Lexer) number() error {
 	start := lexer.current - 1
-	dotCount := 0
-
-	for !lexer.isAtEnd() && (isDigit(lexer.peek()) || lexer.peek() == ".") {
-		if lexer.peek() == "." {
-			dotCount++
-		}
+	for !lexer.isAtEnd() && (isDigit(lexer.peek()) || lexer.peek() == '.') {
 		lexer.advance()
 	}
 
 	value := lexer.source[start:lexer.current]
-	if dotCount > 1 || lexer.previous() == "." {
-		return fmt.Errorf("unexpected token at line %d", lexer.line)
+	num, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return fmt.Errorf("SyntaxError: Unexpected token at line %d", lexer.line)
 	}
-	num, _ := strconv.ParseFloat(value, 64)
 	lexer.addToken(NUMBER, num)
 	return nil
 }
 
 func (lexer *Lexer) identifier() {
-	identifier := string(lexer.source[lexer.current-1])
+	start := lexer.current - 1
 	for isAlphabet(lexer.peek()) && !lexer.isAtEnd() {
-		identifier = identifier + lexer.advance()
+		lexer.advance()
 	}
 
+	identifier := lexer.source[start:lexer.current]
 	if Keywords[identifier] != Undefined {
 		var value any = nil
 		if identifier == TRUE {
@@ -180,25 +182,25 @@ func (lexer *Lexer) addToken(_type TokenType, value interface{}) {
 	lexer.tokens = append(lexer.tokens, token)
 }
 
-func (lexer *Lexer) advance() string {
-	c := string(lexer.source[lexer.current])
+func (lexer *Lexer) advance() byte {
+	c := lexer.source[lexer.current]
 	lexer.current = lexer.current + 1
 	return c
 }
 
-func (lexer *Lexer) peek() string {
-	return string(lexer.source[lexer.current])
+func (lexer *Lexer) peek() byte {
+	return lexer.source[lexer.current]
 }
 
-func (lexer *Lexer) previous() string {
-	return string(lexer.source[lexer.current-1])
+func (lexer *Lexer) previous() byte {
+	return lexer.source[lexer.current-1]
 }
 
 func (lexer *Lexer) isAtEnd() bool {
 	return lexer.current == len(lexer.source)
 }
 
-func (lexer *Lexer) match(c string) bool {
+func (lexer *Lexer) match(c byte) bool {
 	if lexer.isAtEnd() {
 		return false
 	}
@@ -209,23 +211,33 @@ func (lexer *Lexer) match(c string) bool {
 	return true
 }
 
-func isDigit(c string) bool {
-	if c >= "0" && c <= "9" {
+func isDigit(c byte) bool {
+	if c >= '0' && c <= '9' {
 		return true
 	}
 	return false
 }
 
-func isAlphabet(c string) bool {
-	if c >= "a" && c <= "z" {
+func isAlphabet(c byte) bool {
+	switch {
+	case c >= 'a' && c <= 'z':
 		return true
-	}
-	if c >= "A" && c <= "Z" {
+	case c >= 'A' && c <= 'Z':
 		return true
-	}
-	if c == "_" {
+	case c == '_':
 		return true
+	default:
+		return false
 	}
+}
 
-	return false
+func escapeSequence(c byte) byte {
+	switch c {
+	case 'n':
+		return '\n'
+	case 't':
+		return '\t'
+	default:
+		return c
+	}
 }

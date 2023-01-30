@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
 	//lint:ignore ST1001 that's what we want
 	. "github.com/debugg-er/lox/pkg/common"
@@ -52,7 +51,7 @@ func (t *PrintStmt) Execute(e *Environment) *Error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(strings.ReplaceAll(value.Stringify(), `\n`, "\n"))
+	fmt.Print(value.Stringify())
 	return nil
 }
 
