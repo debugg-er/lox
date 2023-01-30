@@ -236,7 +236,6 @@ func (e *Expr) Display(tab int) {
 }
 
 func isTruthy(value Value) bool {
-	fmt.Println(value)
 	switch value.DataType {
 	case NUMBER_DT:
 		return value.Data != 0

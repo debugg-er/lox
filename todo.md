@@ -1,3 +1,2 @@
-- Handle parser error + syncronize
-- Convert bool to bit when evaluate binary expr
-- Expected ; at EOF
+- Create intepreter separately (not in main)
+- Improve Expression

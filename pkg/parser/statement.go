@@ -43,8 +43,8 @@ type BlockStmt struct {
 
 type IfStmt struct {
 	condition *Expr
-	trueStmt  Stmt
-	falseStmt Stmt
+	thenStmt  Stmt
+	elseStmt  Stmt
 }
 
 func (t *PrintStmt) Execute(e *Environment) *Error {
@@ -91,9 +91,9 @@ func (t *IfStmt) Execute(e *Environment) *Error {
 		return err
 	}
 	if isTruthy(*conditionValue) {
-		t.trueStmt.Execute(e)
-	} else if t.falseStmt != nil {
-		t.falseStmt.Execute(e)
+		t.thenStmt.Execute(e)
+	} else if t.elseStmt != nil {
+		t.elseStmt.Execute(e)
 	}
 	return nil
 }

@@ -85,21 +85,21 @@ func (p *Parser) ifStmt() (Stmt, *Error) {
 	if err := p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
 		return nil, err
 	}
-	trueStmt, err := p.statement()
+	thenStmt, err := p.statement()
 	if err != nil {
 		return nil, err
 	}
-	var falseStmt Stmt = nil
+	var elseStmt Stmt = nil
 	if p.match(ELSE) != nil {
-		falseStmt, err = p.statement()
+		elseStmt, err = p.statement()
 		if err != nil {
 			return nil, err
 		}
 	}
 	return &IfStmt{
 		condition: expr,
-		trueStmt:  trueStmt,
-		falseStmt: falseStmt,
+		thenStmt:  thenStmt,
+		elseStmt:  elseStmt,
 	}, nil
 }
 
@@ -265,10 +265,6 @@ func (p *Parser) peek() *Token {
 	return &p.tokens[p.current]
 }
 
-func (p *Parser) previous() *Token {
-	return &p.tokens[p.current-1]
-}
-
 func (p *Parser) match(types ...TokenType) *Token {
 	if p.isAtEnd() {
 		return nil
@@ -299,12 +295,9 @@ func (p *Parser) synchronize() {
 }
 
 func (p *Parser) consume(tokenType TokenType, message string) *Error {
-	if p.isAtEnd() {
-		return nil
+	if p.tokens[p.current].Type != tokenType {
+		return NewError(&p.tokens[p.current], message)
 	}
-	if p.peek().Type != tokenType {
-		return NewError(p.peek(), message)
-	}
-	p.advance()
+	p.current++
 	return nil
 }
