@@ -149,36 +149,18 @@ func (e *Expr) evaluateBinary(env *Environment) (*Value, *Error) {
 }
 
 func (e *Expr) evaluateLogicalBinary(env *Environment) (*Value, *Error) {
-	switch e.Operator.Type {
-	case AND:
-		left, err := e.Left.Evaluate(env)
-		if err != nil {
-			return nil, err
-		}
-		if !isTruthy(*left) {
-			return NewValue(false), nil
-		}
-		right, err := e.Right.Evaluate(env)
-		if err != nil {
-			return nil, err
-		}
-		return NewValue(isTruthy(*right)), nil
-	case OR:
-		left, err := e.Left.Evaluate(env)
-		if err != nil {
-			return nil, err
-		}
-		if isTruthy(*left) {
-			return NewValue(true), nil
-		}
-		right, err := e.Right.Evaluate(env)
-		if err != nil {
-			return nil, err
-		}
-		return NewValue(isTruthy(*right)), nil
-	default:
-		return nil, nil
+	left, err := e.Left.Evaluate(env)
+	if err != nil {
+		return nil, err
 	}
+	if isTruthy(*left) && e.Operator.Type == OR {
+		return NewValue(true), nil
+	}
+	right, err := e.Right.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+	return NewValue(isTruthy(*right)), nil
 }
 
 func (e *Expr) evaluateUnary(env *Environment) (*Value, *Error) {
@@ -218,6 +200,7 @@ func (e *Expr) Display(tab int) {
 		fmt.Printf("%s%s%v\n", spaces4, "variable: ", e.Var.Value)
 	} else if e.Type == ASSIGN {
 		fmt.Printf("%s%s%v", spaces4, "variable: ", e.Var.Value)
+		fmt.Print(spaces4 + "assign: ")
 		e.Left.Display(tab + 4)
 	} else if e.Operator != nil {
 		fmt.Printf("%s%s%v\n", spaces4, "operator: ", e.Operator.Type)
