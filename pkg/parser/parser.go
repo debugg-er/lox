@@ -1,6 +1,7 @@
 package parser
 
 import (
+	//lint:ignore ST1001 that's what we want
 	. "github.com/debugg-er/lox/pkg/common"
 )
 
@@ -25,7 +26,9 @@ func (p *Parser) Parse(tokens []Token) ([]Stmt, []*Error) {
 		if err != nil {
 			errors = append(errors, err)
 			p.synchronize()
-		} else {
+			continue
+		}
+		if stmt != nil {
 			statements = append(statements, stmt)
 		}
 	}
@@ -136,6 +139,9 @@ func (p *Parser) exprStmt() (Stmt, *Error) {
 	if err = p.consume(SEMICOLON, "Expected ';' after expression"); err != nil {
 		return nil, err
 	}
+	if expr == nil {
+		return nil, nil
+	}
 	return &ExprStmt{expr}, nil
 }
 
@@ -233,6 +239,8 @@ func (p *Parser) primary() (*Expr, *Error) {
 			Var:  token,
 		}, nil
 	default:
+		// Give back the token if don't match any precedence
+		p.current--
 		return nil, nil
 	}
 }
