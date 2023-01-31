@@ -46,6 +46,11 @@ type IfStmt struct {
 	elseStmt  Stmt
 }
 
+type WhileStmt struct {
+	condition *Expr
+	thenStmt  Stmt
+}
+
 func (t *PrintStmt) Execute(e *Environment) *Error {
 	value, err := t.Expr.Evaluate(e)
 	if err != nil {
@@ -95,4 +100,17 @@ func (t *IfStmt) Execute(e *Environment) *Error {
 		t.elseStmt.Execute(e)
 	}
 	return nil
+}
+
+func (t *WhileStmt) Execute(e *Environment) *Error {
+	for {
+		conditionValue, err := t.condition.Evaluate(e)
+		if err != nil {
+			return err
+		}
+		if !isTruthy(*conditionValue) {
+			return nil
+		}
+		t.thenStmt.Execute(e)
+	}
 }

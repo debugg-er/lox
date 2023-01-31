@@ -71,7 +71,31 @@ func (p *Parser) statement() (Stmt, *Error) {
 	if p.match(IF) != nil {
 		return p.ifStmt()
 	}
+	if p.match(WHILE) != nil {
+		return p.whileStmt()
+	}
 	return p.exprStmt()
+}
+
+func (p *Parser) whileStmt() (Stmt, *Error) {
+	if err := p.consume(LEFT_PAREN, "Expected '(' after if"); err != nil {
+		return nil, err
+	}
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
+		return nil, err
+	}
+	thenStmt, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &WhileStmt{
+		condition: expr,
+		thenStmt:  thenStmt,
+	}, nil
 }
 
 func (p *Parser) ifStmt() (Stmt, *Error) {
