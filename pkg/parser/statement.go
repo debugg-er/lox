@@ -48,7 +48,14 @@ type IfStmt struct {
 
 type WhileStmt struct {
 	condition *Expr
-	thenStmt  Stmt
+	body      Stmt
+}
+
+type ForStmt struct {
+	initialization Stmt
+	condition      *Expr
+	updation       *Expr
+	body           Stmt
 }
 
 func (t *PrintStmt) Execute(e *Environment) *Error {
@@ -111,6 +118,11 @@ func (t *WhileStmt) Execute(e *Environment) *Error {
 		if !isTruthy(*conditionValue) {
 			return nil
 		}
-		t.thenStmt.Execute(e)
+		t.body.Execute(e)
 	}
+}
+
+func (t *ForStmt) Execute(e *Environment) *Error {
+	fmt.Println(t)
+	return nil
 }

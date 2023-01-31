@@ -74,27 +74,70 @@ func (p *Parser) statement() (Stmt, *Error) {
 	if p.match(WHILE) != nil {
 		return p.whileStmt()
 	}
+	if p.match(FOR) != nil {
+		return p.forStmt()
+	}
 	return p.exprStmt()
 }
 
+func (p *Parser) forStmt() (Stmt, *Error) {
+	if err := p.consume(LEFT_PAREN, "Expected '(' after for"); err != nil {
+		return nil, err
+	}
+	var initialization Stmt = nil
+	var err *Error = nil
+	if p.match(VAR) != nil {
+		initialization, err = p.varDecl()
+	} else {
+		initialization, err = p.exprStmt()
+	}
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consume(SEMICOLON, "Expected ';' after condition"); err != nil {
+		return nil, err
+	}
+	updation, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consume(RIGHT_PAREN, "Expected ')' after updation"); err != nil {
+		return nil, err
+	}
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &ForStmt{
+		initialization: initialization,
+		condition:      condition,
+		updation:       updation,
+		body:           body,
+	}, nil
+}
+
 func (p *Parser) whileStmt() (Stmt, *Error) {
-	if err := p.consume(LEFT_PAREN, "Expected '(' after if"); err != nil {
+	if err := p.consume(LEFT_PAREN, "Expected '(' after while"); err != nil {
 		return nil, err
 	}
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
+	if err := p.consume(RIGHT_PAREN, "Expected ')' after condition"); err != nil {
 		return nil, err
 	}
-	thenStmt, err := p.statement()
+	body, err := p.statement()
 	if err != nil {
 		return nil, err
 	}
 	return &WhileStmt{
 		condition: expr,
-		thenStmt:  thenStmt,
+		body:      body,
 	}, nil
 }
 
@@ -106,7 +149,7 @@ func (p *Parser) ifStmt() (Stmt, *Error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.consume(RIGHT_PAREN, "Expected ')' after expression"); err != nil {
+	if err := p.consume(RIGHT_PAREN, "Expected ')' after condition"); err != nil {
 		return nil, err
 	}
 	thenStmt, err := p.statement()
