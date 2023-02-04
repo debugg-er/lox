@@ -7,80 +7,84 @@ import (
 	. "github.com/debugg-er/lox/pkg/common"
 )
 
-type StmtType int
+type (
+	Stmt interface {
+		Execute(e *Environment) *Error
+	}
 
-const (
-	PRINT_STMM = iota
-	EXPR_STMT
-	IF_STMT
-	FOR_STMT
-	WHILE_STMT
-	RETURN_STMT
-	VAR_STMT
+	Loopable interface {
+		setBreaked(isBreaked bool)
+		isBreaked() bool
+		setContinued(isContinued bool)
+		isContinued() bool
+	}
+
+	Returnable interface {
+		setReturnValue(value *Value)
+		getReturnValue() *Value
+	}
 )
 
-type Stmt interface {
-	Execute(e *Environment) *Error
-}
+type (
+	PrintStmt struct {
+		Expr *Expr
+	}
 
-type PrintStmt struct {
-	Expr *Expr
-}
+	ExprStmt struct {
+		Expr *Expr
+	}
 
-type ExprStmt struct {
-	Expr *Expr
-}
+	VarStmt struct {
+		name       *Token
+		initilizer *Expr
+	}
 
-type VarStmt struct {
-	name       *Token
-	initilizer *Expr
-}
+	BlockStmt struct {
+		declarations []Stmt
+	}
 
-type BlockStmt struct {
-	declarations []Stmt
-}
+	IfStmt struct {
+		condition *Expr
+		thenStmt  Stmt
+		elseStmt  Stmt
+	}
 
-type IfStmt struct {
-	condition *Expr
-	thenStmt  Stmt
-	elseStmt  Stmt
-}
+	WhileStmt struct {
+		condition    *Expr
+		body         Stmt
+		_isBreaked   bool
+		_isContinued bool
+	}
 
-type WhileStmt struct {
-	condition    *Expr
-	body         Stmt
-	_isBreaked   bool
-	_isContinued bool
-}
+	ForStmt struct {
+		initialization Stmt
+		condition      *Expr
+		updation       *Expr
+		body           Stmt
+		_isBreaked     bool
+		_isContinued   bool
+	}
 
-type ForStmt struct {
-	initialization Stmt
-	condition      *Expr
-	updation       *Expr
-	body           Stmt
-	_isBreaked     bool
-	_isContinued   bool
-}
+	BreakStmt struct {
+		token *Token
+	}
 
-type BreakStmt struct {
-	token *Token
-}
+	ContinueStmt struct {
+		token *Token
+	}
 
-type ContinueStmt struct {
-	token *Token
-}
+	FuncStmt struct {
+		name        *Token
+		arguments   any // placeholder
+		body        *BlockStmt
+		returnValue *Value
+	}
 
-type FuncStmt struct {
-	name        *Token
-	arguments   any // placeholder
-	body        *BlockStmt
-	returnValue *Value
-}
-
-type ReturnStmt struct {
-	token *Token
-	expr  *Expr
-}
+	ReturnStmt struct {
+		token *Token
+		expr  *Expr
+	}
+)
 
 // ---------------- Print Statement ----------------
 func (t *PrintStmt) Execute(e *Environment) *Error {

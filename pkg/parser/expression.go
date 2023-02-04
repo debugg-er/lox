@@ -226,7 +226,7 @@ func isTruthy(value Value) bool {
 		return value.Data != ""
 	case BOOLEAN_DT:
 		return value.Data.(bool)
-	case NIL_DT:
+	case NULL_DT:
 		return false
 	default:
 		panic("Language fatal: Undefined datatype")

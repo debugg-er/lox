@@ -5,18 +5,6 @@ import (
 	. "github.com/debugg-er/lox/pkg/common"
 )
 
-type Loopable interface {
-	setBreaked(isBreaked bool)
-	isBreaked() bool
-	setContinued(isContinued bool)
-	isContinued() bool
-}
-
-type Retunable interface {
-	setReturnValue(value *Value)
-	getReturnValue() *Value
-}
-
 type context struct {
 	inFor      bool
 	inWhile    bool

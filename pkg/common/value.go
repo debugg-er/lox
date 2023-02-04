@@ -8,7 +8,8 @@ const (
 	NUMBER_DT DataType = iota
 	STRING_DT
 	BOOLEAN_DT
-	NIL_DT // REDUNDANT: is it still neccessary?
+	FUNCTION_DT
+	NULL_DT // REDUNDANT: is it still neccessary?
 )
 
 type Value struct {
@@ -44,7 +45,7 @@ func NewValue(data interface{}) *Value {
 	case bool:
 		return &Value{BOOLEAN_DT, value}
 	case nil:
-		return &Value{NIL_DT, value}
+		return &Value{NULL_DT, value}
 	default:
 		panic("Language fatal: Undefined datatype")
 	}
