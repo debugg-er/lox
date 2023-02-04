@@ -6,12 +6,18 @@ import (
 )
 
 type Environment struct {
-	store     map[string]*Value
-	enclosing *Environment
+	store           map[string]*Value
+	enclosing       *Environment
+	loopableTarget  Loopable  // Executor Target (ForStmt, WhileStmt, FuncStmt)
+	returableTarget Retunable // Executor Target (ForStmt, WhileStmt, FuncStmt)
 }
 
 func NewEnvironment(enclosing *Environment) *Environment {
-	return &Environment{make(map[string]*Value), enclosing}
+	return &Environment{
+		store:          make(map[string]*Value),
+		enclosing:      enclosing,
+		loopableTarget: nil,
+	}
 }
 
 func (e *Environment) define(variable *Token, value *Value) {
@@ -40,4 +46,24 @@ func (e *Environment) assign(variable *Token, value *Value) *Error {
 		return e.enclosing.assign(variable, value)
 	}
 	return NewError(variable, "Undefined variable '"+varName+"'.")
+}
+
+func (e *Environment) getLoopableTarget() Loopable {
+	if e.loopableTarget != nil {
+		return e.loopableTarget
+	}
+	if e.enclosing != nil {
+		return e.enclosing.getLoopableTarget()
+	}
+	return nil
+}
+
+func (e *Environment) getReturnableTarget() Retunable {
+	if e.returableTarget != nil {
+		return e.returableTarget
+	}
+	if e.enclosing != nil {
+		return e.enclosing.getReturnableTarget()
+	}
+	return nil
 }

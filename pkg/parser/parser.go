@@ -28,9 +28,14 @@ func (p *Parser) Parse(tokens []Token) ([]Stmt, []*Error) {
 			p.synchronize()
 			continue
 		}
-		if stmt != nil {
-			statements = append(statements, stmt)
+		if stmt == nil {
+			continue
 		}
+		if branchingErrors := verifyBranching(stmt); branchingErrors != nil {
+			errors = append(errors, branchingErrors...)
+			continue
+		}
+		statements = append(statements, stmt)
 	}
 	return statements, errors
 }
@@ -77,7 +82,41 @@ func (p *Parser) statement() (Stmt, *Error) {
 	if p.match(FOR) != nil {
 		return p.forStmt()
 	}
+	if p.match(BREAK) != nil {
+		return p.breakStmt()
+	}
+	if p.match(CONTINUE) != nil {
+		return p.continueStmt()
+	}
+	if p.match(RETURN) != nil {
+		return p.returnStmt()
+	}
 	return p.exprStmt()
+}
+
+func (p *Parser) returnStmt() (Stmt, *Error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.consume(SEMICOLON, "Expected ';' after return"); err != nil {
+		return nil, err
+	}
+	return &ReturnStmt{p.previous(), expr}, nil
+}
+
+func (p *Parser) continueStmt() (Stmt, *Error) {
+	if err := p.consume(SEMICOLON, "Expected ';' after continue"); err != nil {
+		return nil, err
+	}
+	return &ContinueStmt{p.previous()}, nil
+}
+
+func (p *Parser) breakStmt() (Stmt, *Error) {
+	if err := p.consume(SEMICOLON, "Expected ';' after break"); err != nil {
+		return nil, err
+	}
+	return &BreakStmt{p.previous()}, nil
 }
 
 func (p *Parser) forStmt() (Stmt, *Error) {
@@ -323,6 +362,10 @@ func (p *Parser) advance() *Token {
 	token := p.tokens[p.current]
 	p.current++
 	return &token
+}
+
+func (p *Parser) previous() *Token {
+	return &p.tokens[p.current-1]
 }
 
 func (p *Parser) peek() *Token {
