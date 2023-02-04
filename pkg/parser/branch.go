@@ -46,7 +46,14 @@ func _verifyBranching(stmt Stmt, context *context) []*Error {
 		context.inFunction = true
 		return _verifyBranching(stmt.body, context)
 	case *IfStmt:
-		return _verifyBranching(stmt.thenStmt, context)
+		errors := append(
+			_verifyBranching(stmt.thenStmt, context),
+			_verifyBranching(stmt.elseStmt, context)...,
+		)
+		if len(errors) == 0 {
+			return nil
+		}
+		return errors
 	case *BlockStmt:
 		errors := make([]*Error, 0)
 		for _, childStmt := range stmt.declarations {

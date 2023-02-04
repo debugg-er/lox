@@ -198,13 +198,18 @@ func (t *ForStmt) Execute(e *Environment) *Error {
 		t.initialization.Execute(e)
 	}
 	for {
-		conditionValue, err := t.condition.Evaluate(e)
-		if err != nil {
-			return err
+		// Condition checking
+		if t.condition != nil {
+			conditionValue, err := t.condition.Evaluate(e)
+			if err != nil {
+				return err
+			}
+			if !isTruthy(*conditionValue) {
+				return nil
+			}
 		}
-		if !isTruthy(*conditionValue) {
-			return nil
-		}
+		// Body execution
+		t.body.Execute(e)
 		if t.isContinued() {
 			t.setContinued(false)
 			continue
@@ -212,7 +217,6 @@ func (t *ForStmt) Execute(e *Environment) *Error {
 		if t.isBreaked() {
 			return nil
 		}
-		t.body.Execute(e)
 		if t.updation != nil {
 			t.updation.Evaluate(e)
 		}

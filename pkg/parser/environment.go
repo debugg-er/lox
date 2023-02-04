@@ -8,8 +8,8 @@ import (
 type Environment struct {
 	store           map[string]*Value
 	enclosing       *Environment
-	loopableTarget  Loopable   // Executor Target (ForStmt, WhileStmt, FuncStmt)
-	returableTarget Returnable // Executor Target (ForStmt, WhileStmt, FuncStmt)
+	loopableTarget  Loopable   // Executor Target (ForStmt, WhileStmt)
+	returableTarget Returnable // Executor Target (FuncStmt)
 }
 
 func NewEnvironment(enclosing *Environment) *Environment {

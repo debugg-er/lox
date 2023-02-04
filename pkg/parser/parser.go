@@ -95,6 +95,7 @@ func (p *Parser) statement() (Stmt, *Error) {
 }
 
 func (p *Parser) returnStmt() (Stmt, *Error) {
+	returnToken := p.previous()
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -102,7 +103,7 @@ func (p *Parser) returnStmt() (Stmt, *Error) {
 	if err := p.consume(SEMICOLON, "Expected ';' after return"); err != nil {
 		return nil, err
 	}
-	return &ReturnStmt{p.previous(), expr}, nil
+	return &ReturnStmt{returnToken, expr}, nil
 }
 
 func (p *Parser) continueStmt() (Stmt, *Error) {
