@@ -52,7 +52,7 @@ func (p *Parser) varDecl() (Stmt, *Error) {
 	if token.Type != IDENTIFIER {
 		return nil, NewError(token, "Expected variable name.")
 	}
-	var initilizer *Expr = nil
+	var initilizer Expr = nil
 	if p.match(EQUAL) != nil {
 		expr, err := p.expression()
 		if err != nil {
@@ -252,29 +252,26 @@ func (p *Parser) exprStmt() (Stmt, *Error) {
 	return &ExprStmt{expr}, nil
 }
 
-func (p *Parser) expression() (*Expr, *Error) {
+func (p *Parser) expression() (Expr, *Error) {
 	return p.assignment()
 }
 
-func (p *Parser) assignment() (*Expr, *Error) {
+func (p *Parser) assignment() (Expr, *Error) {
 	expr, err := p.binaryPrec(binRules, LOGICAL_OR)
 	if err != nil {
 		return nil, err
 	}
 
 	if equal := p.match(EQUAL); equal != nil {
-		if expr.Type != VARIABLE {
+		expr, ok := expr.(*VariableExpr)
+		if !ok {
 			return nil, NewError(equal, "Invalid assignment target.")
 		}
 		assignment, err := p.assignment()
 		if err != nil {
 			return nil, err
 		}
-		return &Expr{
-			Type:        ASSIGN,
-			Var:         expr.Var,
-			AssignValue: assignment,
-		}, nil
+		return &AssignExpr{expr.name, assignment}, nil
 	}
 
 	return expr, nil
@@ -283,7 +280,7 @@ func (p *Parser) assignment() (*Expr, *Error) {
 // `rules` parameter is an array of BinaryRule that were defined
 // with the priority go from highest to lowest accoding to its index.
 // `binaryPrec` should be passed zero value for `ruleIndex` parameter
-func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) (*Expr, *Error) {
+func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) (Expr, *Error) {
 	if ruleIndex == len(rules) {
 		return p.unary()
 	}
@@ -301,16 +298,15 @@ func (p *Parser) binaryPrec(rules []BinaryRule, ruleIndex int) (*Expr, *Error) {
 			return nil, err
 		}
 
-		expr = &Expr{
-			Type:     BINARY,
-			Operator: operator,
-			Left:     expr,
-			Right:    childPrec,
+		expr = &BinaryExpr{
+			operator: operator,
+			left:     expr,
+			right:    childPrec,
 		}
 	}
 }
 
-func (p *Parser) unary() (*Expr, *Error) {
+func (p *Parser) unary() (Expr, *Error) {
 	operator := p.match(BANG, MINUS)
 	if operator == nil {
 		return p.primary()
@@ -319,18 +315,14 @@ func (p *Parser) unary() (*Expr, *Error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Expr{
-		Type:     UNARY,
-		Operator: operator,
-		Left:     unaryExpr,
-	}, nil
+	return &UnaryExpr{operator, unaryExpr}, nil
 }
 
-func (p *Parser) primary() (*Expr, *Error) {
+func (p *Parser) primary() (Expr, *Error) {
 	token := p.advance()
 	switch token.Type {
 	case NUMBER, STRING, TRUE, FALSE, NIL:
-		return NewPrimaryExpr(token), nil
+		return &PrimaryExpr{token}, nil
 	case LEFT_PAREN:
 		expr, err := p.expression()
 		if err != nil {
@@ -341,10 +333,7 @@ func (p *Parser) primary() (*Expr, *Error) {
 		}
 		return expr, nil
 	case IDENTIFIER:
-		return &Expr{
-			Type: VARIABLE,
-			Var:  token,
-		}, nil
+		return &VariableExpr{token}, nil
 	default:
 		// Give back the token if don't match any precedence
 		p.current--

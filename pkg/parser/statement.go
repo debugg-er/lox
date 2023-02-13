@@ -20,6 +20,8 @@ type (
 	}
 
 	Returnable interface {
+		isReturned() bool
+		setIsReturned(isReturned bool)
 		setReturnValue(value *Value)
 		getReturnValue() *Value
 	}
@@ -27,16 +29,16 @@ type (
 
 type (
 	PrintStmt struct {
-		Expr *Expr
+		Expr Expr
 	}
 
 	ExprStmt struct {
-		Expr *Expr
+		Expr Expr
 	}
 
 	VarStmt struct {
 		name       *Token
-		initilizer *Expr
+		initilizer Expr
 	}
 
 	BlockStmt struct {
@@ -44,13 +46,13 @@ type (
 	}
 
 	IfStmt struct {
-		condition *Expr
+		condition Expr
 		thenStmt  Stmt
 		elseStmt  Stmt
 	}
 
 	WhileStmt struct {
-		condition    *Expr
+		condition    Expr
 		body         Stmt
 		_isBreaked   bool
 		_isContinued bool
@@ -58,8 +60,8 @@ type (
 
 	ForStmt struct {
 		initialization Stmt
-		condition      *Expr
-		updation       *Expr
+		condition      Expr
+		updation       Expr
 		body           Stmt
 		_isBreaked     bool
 		_isContinued   bool
@@ -75,14 +77,15 @@ type (
 
 	FuncStmt struct {
 		name        *Token
-		arguments   any // placeholder
+		arguments   []*Value
 		body        *BlockStmt
 		returnValue *Value
+		_isReturned bool
 	}
 
 	ReturnStmt struct {
 		token *Token
-		expr  *Expr
+		expr  Expr
 	}
 )
 
@@ -92,18 +95,14 @@ func (t *PrintStmt) Execute(e *Environment) *Error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(value.Stringify())
+	fmt.Println(value.Stringify())
 	return nil
 }
 
 // ---------------- Expression Statement ----------------
 func (t *ExprStmt) Execute(e *Environment) *Error {
-	if t.Expr.Type == ASSIGN {
-		t.Expr.Evaluate(e)
-	} else {
-		t.Expr.Display(0)
-	}
-	return nil
+	_, err := t.Expr.Evaluate(e)
+	return err
 }
 
 // ---------------- Variable Declaration Statement ----------------
@@ -130,10 +129,11 @@ func (t *BlockStmt) Execute(e *Environment) *Error {
 				return nil
 			}
 		}
-		// Stop execute when break or continue is met
-		switch stmt.(type) {
-		case *BreakStmt, *ContinueStmt:
-			return nil
+		// Stop execute when return is met on child statements
+		if executor := e.getReturnableTarget(); executor != nil {
+			if executor.isReturned() {
+				return nil
+			}
 		}
 	}
 	return nil
@@ -165,12 +165,11 @@ func (t *WhileStmt) Execute(e *Environment) *Error {
 			return nil
 		}
 		t.body.Execute(e)
-		if t.isContinued() {
-			t.setContinued(false)
-			continue
-		}
 		if t.isBreaked() {
 			return nil
+		}
+		if t.isContinued() {
+			t.setContinued(false)
 		}
 	}
 }
@@ -210,12 +209,11 @@ func (t *ForStmt) Execute(e *Environment) *Error {
 		}
 		// Body execution
 		t.body.Execute(e)
-		if t.isContinued() {
-			t.setContinued(false)
-			continue
-		}
 		if t.isBreaked() {
 			return nil
+		}
+		if t.isContinued() {
+			t.setContinued(false)
 		}
 		if t.updation != nil {
 			t.updation.Evaluate(e)
@@ -261,6 +259,11 @@ func (t *ContinueStmt) Execute(e *Environment) *Error {
 func (t *FuncStmt) Execute(e *Environment) *Error {
 	e.returableTarget = t
 	// Todo: Implement function execution
+	value := &Value{
+		DataType: FUNCTION_DT,
+		Data:     t,
+	}
+	e.define(t.name, value)
 	return nil
 }
 
@@ -272,6 +275,14 @@ func (t *FuncStmt) getReturnValue() *Value {
 	return t.returnValue
 }
 
+func (t *FuncStmt) isReturned() bool {
+	return t._isReturned
+}
+
+func (t *FuncStmt) setIsReturned(isReturned bool) {
+	t._isReturned = isReturned
+}
+
 // ---------------- Return Statement ----------------
 func (t *ReturnStmt) Execute(e *Environment) *Error {
 	if executor := e.getReturnableTarget(); executor != nil {
@@ -279,6 +290,7 @@ func (t *ReturnStmt) Execute(e *Environment) *Error {
 		if err != nil {
 			return err
 		}
+		executor.setIsReturned(true)
 		executor.setReturnValue(value)
 		return nil
 	}

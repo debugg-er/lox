@@ -26,15 +26,15 @@ func _verifyBranching(stmt Stmt, context *context) []*Error {
 	switch stmt := stmt.(type) {
 	case *BreakStmt:
 		if !context.inFor && !context.inWhile {
-			return []*Error{NewError(stmt.token, "SynctaxError: 'break' statement can only be used within an enclosing iteration")}
+			return []*Error{NewError(stmt.token, "SyntaxError: 'break' statement can only be used within an enclosing iteration")}
 		}
 	case *ContinueStmt:
 		if !context.inFor && !context.inWhile {
-			return []*Error{NewError(stmt.token, "SynctaxError: 'continue' statement can only be used within an enclosing iteration")}
+			return []*Error{NewError(stmt.token, "SyntaxError: 'continue' statement can only be used within an enclosing iteration")}
 		}
 	case *ReturnStmt:
 		if !context.inFunction {
-			return []*Error{NewError(stmt.token, "SynctaxError: 'return' statement can only be used within function")}
+			return []*Error{NewError(stmt.token, "SyntaxError: 'return' statement can only be used within function")}
 		}
 	case *ForStmt:
 		context.inFor = true
