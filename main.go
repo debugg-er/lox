@@ -45,7 +45,7 @@ func execute(source string) {
 	statements, errs := p.Parse(tokens)
 	if len(errs) != 0 {
 		for _, err := range errs {
-			err.Blame()
+			fmt.Fprintf(os.Stderr, err.Error())
 		}
 		return
 	}
@@ -54,7 +54,7 @@ func execute(source string) {
 	for _, stmt := range statements {
 		err := stmt.Execute(environment)
 		if err != nil {
-			err.Blame()
+			fmt.Fprintf(os.Stderr, err.Error())
 			return
 		}
 	}

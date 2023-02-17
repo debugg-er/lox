@@ -9,7 +9,7 @@ import (
 
 type (
 	Stmt interface {
-		Execute(e *Environment) *Error
+		Execute(e *Environment) error
 	}
 
 	Loopable interface {
@@ -77,7 +77,7 @@ type (
 
 	FuncStmt struct {
 		name        *Token
-		arguments   []*Value
+		parameters  []*Token
 		body        *BlockStmt
 		returnValue *Value
 		_isReturned bool
@@ -90,7 +90,7 @@ type (
 )
 
 // ---------------- Print Statement ----------------
-func (t *PrintStmt) Execute(e *Environment) *Error {
+func (t *PrintStmt) Execute(e *Environment) error {
 	value, err := t.Expr.Evaluate(e)
 	if err != nil {
 		return err
@@ -100,13 +100,13 @@ func (t *PrintStmt) Execute(e *Environment) *Error {
 }
 
 // ---------------- Expression Statement ----------------
-func (t *ExprStmt) Execute(e *Environment) *Error {
+func (t *ExprStmt) Execute(e *Environment) error {
 	_, err := t.Expr.Evaluate(e)
 	return err
 }
 
 // ---------------- Variable Declaration Statement ----------------
-func (t *VarStmt) Execute(e *Environment) *Error {
+func (t *VarStmt) Execute(e *Environment) error {
 	value, err := t.initilizer.Evaluate(e)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (t *VarStmt) Execute(e *Environment) *Error {
 }
 
 // ---------------- Block Statement ----------------
-func (t *BlockStmt) Execute(e *Environment) *Error {
+func (t *BlockStmt) Execute(e *Environment) error {
 	blockEnv := NewEnvironment(e)
 	for _, stmt := range t.declarations {
 		err := stmt.Execute(blockEnv)
@@ -140,7 +140,7 @@ func (t *BlockStmt) Execute(e *Environment) *Error {
 }
 
 // ---------------- If Statement ----------------
-func (t *IfStmt) Execute(e *Environment) *Error {
+func (t *IfStmt) Execute(e *Environment) error {
 	conditionValue, err := t.condition.Evaluate(e)
 	if err != nil {
 		return err
@@ -154,7 +154,7 @@ func (t *IfStmt) Execute(e *Environment) *Error {
 }
 
 // ---------------- While Statement ----------------
-func (t *WhileStmt) Execute(e *Environment) *Error {
+func (t *WhileStmt) Execute(e *Environment) error {
 	e.loopableTarget = t
 	for {
 		conditionValue, err := t.condition.Evaluate(e)
@@ -191,7 +191,7 @@ func (t *WhileStmt) setContinued(isContinued bool) {
 }
 
 // ---------------- For Statement ----------------
-func (t *ForStmt) Execute(e *Environment) *Error {
+func (t *ForStmt) Execute(e *Environment) error {
 	e.loopableTarget = t
 	if t.initialization != nil {
 		t.initialization.Execute(e)
@@ -238,32 +238,32 @@ func (t *ForStmt) setContinued(isContinued bool) {
 }
 
 // ---------------- Break Statement ----------------
-func (t *BreakStmt) Execute(e *Environment) *Error {
-	if executor := e.getLoopableTarget(); executor != nil {
-		executor.setBreaked(true)
-		return nil
+func (t *BreakStmt) Execute(e *Environment) error {
+	executor := e.getLoopableTarget()
+	if executor != nil {
+		return NewError(t.token, "RuntimeError: 'break' statement can only be used within an enclosing iteration")
 	}
-	return NewError(t.token, "RuntimeError: 'break' statement can only be used within an enclosing iteration")
+	executor.setBreaked(true)
+	return nil
 }
 
 // ---------------- Continue Statement ----------------
-func (t *ContinueStmt) Execute(e *Environment) *Error {
-	if executor := e.getLoopableTarget(); executor != nil {
-		executor.setContinued(true)
-		return nil
+func (t *ContinueStmt) Execute(e *Environment) error {
+	executor := e.getLoopableTarget()
+	if executor == nil {
+		return NewError(t.token, "RuntimeError: 'continue' statement can only be used within an enclosing iteration")
 	}
-	return NewError(t.token, "RuntimeError: 'continue' statement can only be used within an enclosing iteration")
+	executor.setContinued(true)
+	return nil
 }
 
 // ---------------- Function Statement ----------------
-func (t *FuncStmt) Execute(e *Environment) *Error {
+func (t *FuncStmt) Execute(e *Environment) error {
 	e.returableTarget = t
-	// Todo: Implement function execution
-	value := &Value{
-		DataType: FUNCTION_DT,
-		Data:     t,
+	err := t.body.Execute(e)
+	if err != nil {
+		return err
 	}
-	e.define(t.name, value)
 	return nil
 }
 
@@ -284,15 +284,16 @@ func (t *FuncStmt) setIsReturned(isReturned bool) {
 }
 
 // ---------------- Return Statement ----------------
-func (t *ReturnStmt) Execute(e *Environment) *Error {
-	if executor := e.getReturnableTarget(); executor != nil {
-		value, err := t.expr.Evaluate(e)
-		if err != nil {
-			return err
-		}
-		executor.setIsReturned(true)
-		executor.setReturnValue(value)
-		return nil
+func (t *ReturnStmt) Execute(e *Environment) error {
+	executor := e.getReturnableTarget()
+	if executor == nil {
+		return NewError(t.token, "RuntimeError: 'continue' statement can only be used within an enclosing iteration")
 	}
-	return NewError(t.token, "RuntimeError: 'continue' statement can only be used within an enclosing iteration")
+	value, err := t.expr.Evaluate(e)
+	if err != nil {
+		return err
+	}
+	executor.setIsReturned(true)
+	executor.setReturnValue(value)
+	return nil
 }

@@ -24,7 +24,7 @@ func (e *Environment) define(variable *Token, value *Value) {
 	e.store[variable.Value.(string)] = value
 }
 
-func (e *Environment) get(variable *Token) (*Value, *Error) {
+func (e *Environment) get(variable *Token) (*Value, error) {
 	varName := variable.Value.(string)
 	value := e.store[varName]
 	if value != nil {
@@ -36,7 +36,7 @@ func (e *Environment) get(variable *Token) (*Value, *Error) {
 	return nil, NewError(variable, "Undefined variable '"+varName+"'.")
 }
 
-func (e *Environment) assign(variable *Token, value *Value) *Error {
+func (e *Environment) assign(variable *Token, value *Value) error {
 	varName := variable.Value.(string)
 	if e.store[varName] != nil {
 		e.store[variable.Value.(string)] = value

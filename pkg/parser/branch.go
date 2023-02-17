@@ -11,7 +11,7 @@ type context struct {
 	inFunction bool
 }
 
-func verifyBranching(stmt Stmt) []*Error {
+func verifyBranching(stmt Stmt) []error {
 	context := &context{}
 
 	switch stmt.(type) {
@@ -22,19 +22,19 @@ func verifyBranching(stmt Stmt) []*Error {
 	}
 }
 
-func _verifyBranching(stmt Stmt, context *context) []*Error {
+func _verifyBranching(stmt Stmt, context *context) []error {
 	switch stmt := stmt.(type) {
 	case *BreakStmt:
 		if !context.inFor && !context.inWhile {
-			return []*Error{NewError(stmt.token, "SyntaxError: 'break' statement can only be used within an enclosing iteration")}
+			return []error{NewError(stmt.token, "SyntaxError: 'break' statement can only be used within an enclosing iteration")}
 		}
 	case *ContinueStmt:
 		if !context.inFor && !context.inWhile {
-			return []*Error{NewError(stmt.token, "SyntaxError: 'continue' statement can only be used within an enclosing iteration")}
+			return []error{NewError(stmt.token, "SyntaxError: 'continue' statement can only be used within an enclosing iteration")}
 		}
 	case *ReturnStmt:
 		if !context.inFunction {
-			return []*Error{NewError(stmt.token, "SyntaxError: 'return' statement can only be used within function")}
+			return []error{NewError(stmt.token, "SyntaxError: 'return' statement can only be used within function")}
 		}
 	case *ForStmt:
 		context.inFor = true
@@ -55,7 +55,7 @@ func _verifyBranching(stmt Stmt, context *context) []*Error {
 		}
 		return errors
 	case *BlockStmt:
-		errors := make([]*Error, 0)
+		errors := make([]error, 0)
 		for _, childStmt := range stmt.declarations {
 			errors = append(errors, _verifyBranching(childStmt, context)...)
 		}

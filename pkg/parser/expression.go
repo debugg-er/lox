@@ -7,7 +7,7 @@ import (
 
 type (
 	Expr interface {
-		Evaluate(env *Environment) (*Value, *Error)
+		Evaluate(env *Environment) (*Value, error)
 	}
 
 	Callable interface {
@@ -40,16 +40,21 @@ type (
 		value Expr
 	}
 
-	FunctionExpr struct {
-		arguments []*Value
+	FuncExpr struct {
+		funcStmt *FuncStmt
+	}
+
+	CallExpr struct {
+		callee    Expr
+		arguments []Expr
 	}
 )
 
-func (e *PrimaryExpr) Evaluate(env *Environment) (*Value, *Error) {
+func (e *PrimaryExpr) Evaluate(env *Environment) (*Value, error) {
 	return NewValue(e.value.Value), nil
 }
 
-func (e *UnaryExpr) Evaluate(env *Environment) (*Value, *Error) {
+func (e *UnaryExpr) Evaluate(env *Environment) (*Value, error) {
 	preValue, err := e.operand.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -68,7 +73,7 @@ func (e *UnaryExpr) Evaluate(env *Environment) (*Value, *Error) {
 	}
 }
 
-func (e *BinaryExpr) Evaluate(env *Environment) (*Value, *Error) {
+func (e *BinaryExpr) Evaluate(env *Environment) (*Value, error) {
 	switch e.operator.Type {
 	case AND, OR:
 		left, err := e.left.Evaluate(env)
@@ -160,11 +165,11 @@ func (e *BinaryExpr) Evaluate(env *Environment) (*Value, *Error) {
 
 }
 
-func (e *VariableExpr) Evaluate(env *Environment) (*Value, *Error) {
+func (e *VariableExpr) Evaluate(env *Environment) (*Value, error) {
 	return env.get(e.name)
 }
 
-func (e *AssignExpr) Evaluate(env *Environment) (*Value, *Error) {
+func (e *AssignExpr) Evaluate(env *Environment) (*Value, error) {
 	value, err := e.value.Evaluate(env)
 	if err != nil {
 		return nil, err
@@ -175,6 +180,53 @@ func (e *AssignExpr) Evaluate(env *Environment) (*Value, *Error) {
 	}
 	return value, nil
 }
+
+func (e *FuncExpr) Evaluate(env *Environment) (*Value, error) {
+	value := &Value{
+		DataType: FUNCTION_DT,
+		Data:     e.funcStmt,
+	}
+	if e.funcStmt.name != nil {
+		env.define(e.funcStmt.name, value)
+	}
+	return value, nil
+}
+
+func (e *CallExpr) Evaluate(env *Environment) (*Value, error) {
+	value, err := e.callee.Evaluate(env)
+	if err != nil {
+		return nil, err
+	}
+	if value.DataType != FUNCTION_DT {
+		// Must fix
+		return nil, NewError(&Token{Type: FUN, Line: 0}, "Expected function call.")
+	}
+	funcStmt := value.Data.(*FuncStmt)
+	if len(e.arguments) < len(funcStmt.parameters) {
+		return nil, NewError(funcStmt.parameters[0], "Too few arguments.")
+	}
+	if len(e.arguments) > len(funcStmt.parameters) {
+		return nil, NewError(funcStmt.parameters[0], "Too many arguments.")
+	}
+	funcEnv := NewEnvironment(env)
+	for i, token := range funcStmt.parameters {
+		argumentVal, err := e.arguments[i].Evaluate(env)
+		if err != nil {
+			return nil, err
+		}
+		funcEnv.define(token, argumentVal)
+	}
+
+	err = funcStmt.Execute(funcEnv)
+	if err != nil {
+		return nil, err
+	}
+	return funcStmt.getReturnValue(), nil
+}
+
+// func (e *CallExpr) Call(env *Environment) (*Value, error) {
+
+// }
 
 func isTruthy(value Value) bool {
 	switch value.DataType {
