@@ -5,4 +5,5 @@ fun fibonaci(n) {
     return fibonaci(n-1) + fibonaci(n-2);
 }
 
-print fibonaci(25);
+print fibonaci(15);
+print 1+1+2+3+5+8+13+21+34;
