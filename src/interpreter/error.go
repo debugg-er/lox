@@ -1,11 +1,13 @@
-package common
+package interpreter
 
 import (
 	"fmt"
+
+	"github.com/debugg-er/lox/src/lexer"
 )
 
 type Error struct {
-	token   *Token
+	token   *lexer.Token
 	message string
 }
 
@@ -13,6 +15,6 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("Line %d at '%s': %s\n", e.token.Line, e.token.Type, e.message)
 }
 
-func NewError(token *Token, message string) *Error {
+func NewRuntimeError(token *lexer.Token, message string) *Error {
 	return &Error{token, message}
 }

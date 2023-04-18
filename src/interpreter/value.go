@@ -1,4 +1,4 @@
-package common
+package interpreter
 
 import "fmt"
 
@@ -9,7 +9,7 @@ const (
 	STRING_DT
 	BOOLEAN_DT
 	FUNCTION_DT
-	NULL_DT // REDUNDANT: is it still neccessary?
+	NULL_DT
 )
 
 type Value struct {
@@ -30,7 +30,7 @@ func (v Value) Stringify() string {
 			return "false"
 		}
 	case nil:
-		return "nil"
+		return "null"
 	default:
 		return ""
 	}

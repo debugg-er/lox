@@ -1,15 +1,16 @@
-package parser
+package interpreter
 
 import (
-	//lint:ignore ST1001 that's what we want
-	. "github.com/debugg-er/lox/pkg/common"
+	l "github.com/debugg-er/lox/src/lexer"
+	"github.com/debugg-er/lox/src/parser"
 )
 
 type Environment struct {
 	store           map[string]*Value
 	enclosing       *Environment
-	loopableTarget  Loopable   // Executor Target (ForStmt, WhileStmt)
-	returableTarget Returnable // Executor Target (FuncStmt)
+	loopableTarget  parser.Loopable   // Executor Target (ForStmt, WhileStmt)
+	returableTarget parser.Returnable // Executor Target (FuncStmt)
+	returnValue     *Value
 }
 
 func NewEnvironment(enclosing *Environment) *Environment {
@@ -20,11 +21,11 @@ func NewEnvironment(enclosing *Environment) *Environment {
 	}
 }
 
-func (e *Environment) define(variable *Token, value *Value) {
+func (e *Environment) define(variable *l.Token, value *Value) {
 	e.store[variable.Value.(string)] = value
 }
 
-func (e *Environment) get(variable *Token) (*Value, error) {
+func (e *Environment) get(variable *l.Token) (*Value, error) {
 	varName := variable.Value.(string)
 	value := e.store[varName]
 	if value != nil {
@@ -33,10 +34,10 @@ func (e *Environment) get(variable *Token) (*Value, error) {
 	if e.enclosing != nil {
 		return e.enclosing.get(variable)
 	}
-	return nil, NewError(variable, "Undefined variable '"+varName+"'.")
+	return nil, NewRuntimeError(variable, "Undefined variable '"+varName+"'.")
 }
 
-func (e *Environment) assign(variable *Token, value *Value) error {
+func (e *Environment) assign(variable *l.Token, value *Value) error {
 	varName := variable.Value.(string)
 	if e.store[varName] != nil {
 		e.store[variable.Value.(string)] = value
@@ -45,10 +46,10 @@ func (e *Environment) assign(variable *Token, value *Value) error {
 	if e.enclosing != nil {
 		return e.enclosing.assign(variable, value)
 	}
-	return NewError(variable, "Undefined variable '"+varName+"'.")
+	return NewRuntimeError(variable, "Undefined variable '"+varName+"'.")
 }
 
-func (e *Environment) getLoopableTarget() Loopable {
+func (e *Environment) getLoopableTarget() parser.Loopable {
 	if e.loopableTarget != nil {
 		return e.loopableTarget
 	}
@@ -58,12 +59,22 @@ func (e *Environment) getLoopableTarget() Loopable {
 	return nil
 }
 
-func (e *Environment) getReturnableTarget() Returnable {
+func (e *Environment) getReturnableTarget() parser.Returnable {
 	if e.returableTarget != nil {
 		return e.returableTarget
 	}
 	if e.enclosing != nil {
 		return e.enclosing.getReturnableTarget()
+	}
+	return nil
+}
+
+func (e *Environment) getReturnableTargetEnv() *Environment {
+	if e.returableTarget != nil {
+		return e
+	}
+	if e.enclosing != nil {
+		return e.enclosing.getReturnableTargetEnv()
 	}
 	return nil
 }

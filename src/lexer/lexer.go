@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-
-	//lint:ignore ST1001 that's what we want
-	. "github.com/debugg-er/lox/pkg/common"
 )
 
 type Lexer struct {

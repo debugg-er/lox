@@ -1,10 +1,5 @@
 package parser
 
-import (
-	//lint:ignore ST1001 that's what we want
-	. "github.com/debugg-er/lox/pkg/common"
-)
-
 type context struct {
 	inFor      bool
 	inWhile    bool
@@ -26,29 +21,29 @@ func _verifyBranching(stmt Stmt, context *context) []error {
 	switch stmt := stmt.(type) {
 	case *BreakStmt:
 		if !context.inFor && !context.inWhile {
-			return []error{NewError(stmt.token, "SyntaxError: 'break' statement can only be used within an enclosing iteration")}
+			return []error{NewParserError(stmt.Token, "SyntaxError: 'break' statement can only be used within an enclosing iteration")}
 		}
 	case *ContinueStmt:
 		if !context.inFor && !context.inWhile {
-			return []error{NewError(stmt.token, "SyntaxError: 'continue' statement can only be used within an enclosing iteration")}
+			return []error{NewParserError(stmt.Token, "SyntaxError: 'continue' statement can only be used within an enclosing iteration")}
 		}
 	case *ReturnStmt:
 		if !context.inFunction {
-			return []error{NewError(stmt.token, "SyntaxError: 'return' statement can only be used within function")}
+			return []error{NewParserError(stmt.Token, "SyntaxError: 'return' statement can only be used within function")}
 		}
 	case *ForStmt:
 		context.inFor = true
-		return _verifyBranching(stmt.body, context)
+		return _verifyBranching(stmt.Body, context)
 	case *WhileStmt:
 		context.inWhile = true
-		return _verifyBranching(stmt.body, context)
+		return _verifyBranching(stmt.Body, context)
 	case *FuncStmt:
 		context.inFunction = true
-		return _verifyBranching(stmt.body, context)
+		return _verifyBranching(stmt.Body, context)
 	case *IfStmt:
 		errors := append(
-			_verifyBranching(stmt.thenStmt, context),
-			_verifyBranching(stmt.elseStmt, context)...,
+			_verifyBranching(stmt.ThenStmt, context),
+			_verifyBranching(stmt.ElseStmt, context)...,
 		)
 		if len(errors) == 0 {
 			return nil
@@ -56,7 +51,7 @@ func _verifyBranching(stmt Stmt, context *context) []error {
 		return errors
 	case *BlockStmt:
 		errors := make([]error, 0)
-		for _, childStmt := range stmt.declarations {
+		for _, childStmt := range stmt.Declarations {
 			errors = append(errors, _verifyBranching(childStmt, context)...)
 		}
 		if len(errors) == 0 {
